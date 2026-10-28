@@ -167,6 +167,7 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
     """Extract structured source provenance metadata from an AIMessage or turn result dict."""
     resp_type = None
     intent = None
+    gemini_diag = None
     if isinstance(msg_or_result, AIMessage):
         kwargs = getattr(msg_or_result, "additional_kwargs", {}) or {}
         exec_time = kwargs.get("execution_time_seconds")
@@ -177,6 +178,7 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
         resp_type = kwargs.get("response_type")
         intent = kwargs.get("intent")
         rerank_meta = kwargs.get("rerank_metadata")
+        gemini_diag = kwargs.get("gemini_diagnostic")
     elif isinstance(msg_or_result, dict):
         exec_time = msg_or_result.get("execution_time_seconds")
         sources = msg_or_result.get("sources") or []
@@ -186,6 +188,7 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
         resp_type = msg_or_result.get("response_type")
         intent = msg_or_result.get("intent")
         rerank_meta = msg_or_result.get("rerank_metadata")
+        gemini_diag = msg_or_result.get("gemini_diagnostic")
     else:
         return {}
 
@@ -217,7 +220,32 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
         "rerank_score": d0.get("rerank_score"),
         "rerank_reason": d0.get("rerank_reason"),
         "rerank_metadata": rerank_meta,
+        "gemini_diagnostic": gemini_diag,
     }
+
+
+def is_gemini_synthesis_error(gemini_content: str, gemini_diag: Optional[Dict[str, Any]] = None) -> bool:
+    """Determine whether Gemini AI output represents a failure rather than successful generation."""
+    if gemini_diag and isinstance(gemini_diag, dict):
+        if gemini_diag.get("success") is False:
+            return True
+        if gemini_diag.get("error_type") and gemini_diag.get("error_type") != "none":
+            return True
+    if not gemini_content:
+        return False
+    stripped = gemini_content.strip()
+    return (
+        stripped.startswith("⚠️")
+        or stripped.startswith("❌")
+        or stripped.startswith("⚙️")
+        or stripped.startswith("⏱️")
+        or stripped.startswith("🔒")
+        or stripped.startswith("☁️")
+        or "Gemini AI synthesis is temporarily unavailable" in stripped
+        or "Google Gemini Service Unavailable" in stripped
+        or "Gemini AI Rate Limit" in stripped
+        or "Gemini AI Quota" in stripped
+    )
 
 
 def render_message_provenance_bar(info: Dict[str, Any]) -> None:
@@ -316,6 +344,13 @@ def render_engine_footer(engine_type: str = "pdf") -> None:
         st.markdown(
             """<div style="color: #9aa0a6; font-size: 0.77rem; font-style: italic; margin-top: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">
                 <span>📄 pdf answer</span>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    elif engine_type == "error":
+        st.markdown(
+            """<div style="color: #b45309; font-size: 0.77rem; font-style: italic; margin-top: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">
+                <span>⚠️ ai synthesis unavailable • verified rule-based pdf fallback</span>
             </div>""",
             unsafe_allow_html=True,
         )
@@ -1515,6 +1550,29 @@ for msg_idx, msg in enumerate(thread_messages):
         g_color = "#92400e" if is_out else "#6a1b9a"
 
         with st.chat_message("assistant", avatar="⚖️"):
+            is_gem_err = is_gemini_synthesis_error(gemini_content, src_info.get("gemini_diagnostic"))
+            gem_diag = src_info.get("gemini_diagnostic") or {}
+            err_badge = gem_diag.get("error_type") or "Unavailable"
+            if gem_diag.get("status_code"):
+                err_badge = f"{err_badge} ({gem_diag['status_code']})"
+
+            if is_gem_err:
+                gem_header_html = f"""
+                <div style="background-color: #fffbeb; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #92400e; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #f59e0b;">
+                    <span>⚠️ Gemini AI (Synthesis Unavailable)</span>
+                    <span style="font-size: 0.72rem; background: #fef3c7; color: #b45309; padding: 2px 7px; border-radius: 6px; border: 1px solid #fde68a;">⚠️ {err_badge}</span>
+                </div>
+                """
+                gem_footer_type = "error"
+            else:
+                gem_header_html = f"""
+                <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
+                    <span>✨ With Context (Gemini AI Synthesis)</span>
+                    <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
+                </div>
+                """
+                gem_footer_type = "ai"
+
             if choice == "both":
                 col_rule, col_gemini = st.columns(2)
                 with col_rule:
@@ -1534,41 +1592,25 @@ for msg_idx, msg in enumerate(thread_messages):
                     render_engine_footer("pdf")
 
                 with col_gemini:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
-                            <span>✨ With Context (Gemini AI Synthesis)</span>
-                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(gem_header_html, unsafe_allow_html=True)
                     if gemini_content:
-                        if should_stream:
+                        if should_stream and not is_gem_err:
                             st.write_stream(stream_text_word_by_word(gemini_content))
                         else:
                             st.markdown(gemini_content)
                     else:
                         st.info("Gemini context synthesis is not yet generated for this turn.")
-                    render_engine_footer("ai")
+                    render_engine_footer(gem_footer_type)
 
             elif choice == "gemini":
                 tab_ctx, tab_verbatim = st.tabs(["✨ With Context (Gemini AI)", "📜 Without Context (PDF Verbatim)"])
                 with tab_ctx:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
-                            <span>✨ Gemini AI (Context-Aware Synthesis)</span>
-                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    if should_stream:
+                    st.markdown(gem_header_html, unsafe_allow_html=True)
+                    if should_stream and not is_gem_err:
                         st.write_stream(stream_text_word_by_word(gemini_content or msg.content))
                     else:
                         st.markdown(gemini_content or msg.content)
-                    render_engine_footer("ai")
+                    render_engine_footer(gem_footer_type)
 
                 with tab_verbatim:
                     st.markdown(
@@ -1602,20 +1644,12 @@ for msg_idx, msg in enumerate(thread_messages):
                     render_engine_footer("pdf")
 
                 with tab_ctx:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
-                            <span>✨ Gemini AI (Context-Aware Synthesis)</span>
-                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(gem_header_html, unsafe_allow_html=True)
                     if gemini_content:
                         st.markdown(gemini_content)
                     else:
                         st.info("Gemini context synthesis is not yet generated for this turn. Click 'Rerun with Gemini' below to synthesize.")
-                    render_engine_footer("ai")
+                    render_engine_footer(gem_footer_type)
 
             # Clean full-width Provenance Bar
             render_message_provenance_bar(src_info)
@@ -1737,6 +1771,29 @@ if active_query and active_query.strip():
             g_bg = "#fed7aa" if is_out else "#ede7f6"
             g_color = "#92400e" if is_out else "#6a1b9a"
 
+            is_gem_err = is_gemini_synthesis_error(gemini_ans, src_info.get("gemini_diagnostic"))
+            gem_diag = src_info.get("gemini_diagnostic") or {}
+            err_badge = gem_diag.get("error_type") or "Unavailable"
+            if gem_diag.get("status_code"):
+                err_badge = f"{err_badge} ({gem_diag['status_code']})"
+
+            if is_gem_err:
+                gem_header_html = f"""
+                <div style="background-color: #fffbeb; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #92400e; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #f59e0b;">
+                    <span>⚠️ Gemini AI (Synthesis Unavailable)</span>
+                    <span style="font-size: 0.72rem; background: #fef3c7; color: #b45309; padding: 2px 7px; border-radius: 6px; border: 1px solid #fde68a;">⚠️ {err_badge}</span>
+                </div>
+                """
+                gem_footer_type = "error"
+            else:
+                gem_header_html = f"""
+                <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
+                    <span>✨ With Context (Gemini AI Synthesis)</span>
+                    <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
+                </div>
+                """
+                gem_footer_type = "ai"
+
             if chosen_engine == "both":
                 col_l, col_r = st.columns(2)
                 with col_l:
@@ -1753,32 +1810,22 @@ if active_query and active_query.strip():
                     render_engine_footer("pdf")
 
                 with col_r:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
-                            <span>✨ With Context (Gemini AI Synthesis)</span>
-                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    st.write_stream(stream_text_word_by_word(gemini_ans))
-                    render_engine_footer("ai")
+                    st.markdown(gem_header_html, unsafe_allow_html=True)
+                    if not is_gem_err:
+                        st.write_stream(stream_text_word_by_word(gemini_ans))
+                    else:
+                        st.markdown(gemini_ans)
+                    render_engine_footer(gem_footer_type)
 
             elif chosen_engine == "gemini":
                 tab_ctx, tab_verbatim = st.tabs(["✨ With Context (Gemini AI)", "📜 Without Context (PDF Verbatim)"])
                 with tab_ctx:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
-                            <span>✨ Gemini AI (Context-Aware Synthesis)</span>
-                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    st.write_stream(stream_text_word_by_word(gemini_ans))
-                    render_engine_footer("ai")
+                    st.markdown(gem_header_html, unsafe_allow_html=True)
+                    if not is_gem_err:
+                        st.write_stream(stream_text_word_by_word(gemini_ans))
+                    else:
+                        st.markdown(gemini_ans)
+                    render_engine_footer(gem_footer_type)
 
                 with tab_verbatim:
                     st.markdown(
@@ -1809,20 +1856,12 @@ if active_query and active_query.strip():
                     render_engine_footer("pdf")
 
                 with tab_ctx:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
-                            <span>✨ Gemini AI (Context-Aware Synthesis)</span>
-                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(gem_header_html, unsafe_allow_html=True)
                     if gemini_ans:
                         st.markdown(gemini_ans)
                     else:
                         st.info("Gemini context synthesis is not yet generated for this turn. Click 'Rerun with Gemini' below to synthesize.")
-                    render_engine_footer("ai")
+                    render_engine_footer(gem_footer_type)
 
             # Clean full-width Provenance Bar
             render_message_provenance_bar(src_info)

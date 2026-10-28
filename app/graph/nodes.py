@@ -942,6 +942,7 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
     intent = state.get("intent", "")
     resp_type = state.get("response_type")
     gemini_ans = state.get("gemini_answer")
+    gemini_diagnostic = state.get("gemini_diagnostic")
     user_id = state.get("user_id") or "default_user"
     mem0_memories = state.get("mem0_memories") or []
 
@@ -951,6 +952,7 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
                 "### ⚖️ Domain Restriction\n\n"
                 "Please ask questions based on the Constitution of India domain only."
             )
+            gemini_diagnostic = {"success": True, "status_code": 200, "note": "domain_restricted"}
         elif intent == "greeting":
             gemini_ans = (
                 "### 🇮🇳 Namaste & Welcome!\n"
@@ -959,6 +961,7 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
                 "from your loaded official PDF.\n\n"
                 "Feel free to ask about any article, right, duty, or comparison!"
             )
+            gemini_diagnostic = {"success": True, "status_code": 200, "note": "greeting"}
         else:
             try:
                 # Query Mem0 for user context and persistent preferences
@@ -974,7 +977,9 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
                 mem0_memories = []
 
             try:
-                gemini_ans = generate_gemini_constitutional_response(
+                from app.retrieval.gemini_service import generate_gemini_with_diagnostics
+
+                diag_res = generate_gemini_with_diagnostics(
                     question=state.get("question", ""),
                     retrieved_docs=state.get("retrieved_documents", []),
                     conversation_history=state.get("messages", []),
@@ -982,14 +987,25 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
                     topic=state.get("topic"),
                     user_memories=mem0_memories,
                 )
+                gemini_ans = diag_res.text
+                gemini_diagnostic = diag_res.to_dict()
             except Exception as e:
                 logger.warning("Fault tolerance fallback: Gemini synthesis error: %s", e)
                 gemini_ans = (
-                    "*(Gemini AI synthesis is temporarily unavailable or timed out. "
-                    "The deterministic rule-based analysis above remains 100% verified against your local Constitution PDF.)*"
+                    f"⚠️ *Gemini AI synthesis encountered an error: {e}. "
+                    "The deterministic rule-based analysis remains 100% verified against your local Constitution PDF.*"
                 )
+                gemini_diagnostic = {
+                    "success": False,
+                    "error_type": "exception",
+                    "provider_message": str(e),
+                }
 
-    return {"gemini_answer": gemini_ans, "mem0_memories": mem0_memories}
+    return {
+        "gemini_answer": gemini_ans,
+        "gemini_diagnostic": gemini_diagnostic,
+        "mem0_memories": mem0_memories,
+    }
 
 
 def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[str, Any]:
@@ -1037,6 +1053,7 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
         content=msg_content,
         additional_kwargs={
             "gemini_answer": gemini_ans,
+            "gemini_diagnostic": state.get("gemini_diagnostic"),
             "rule_answer": rule_ans,
             "selected_engine": choice,
             "sources": sources,

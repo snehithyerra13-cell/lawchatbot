@@ -42,6 +42,7 @@ class ConstitutionState(TypedDict, total=False):
     comparison_data: Optional[Dict[str, Any]]
     answer: str
     gemini_answer: Optional[str]
+    gemini_diagnostic: Optional[Dict[str, Any]]
     sources: List[Dict[str, Any]]
     needs_clarification: bool
     response_type: str

@@ -6,10 +6,13 @@ grounded in the retrieved PDF constitutional text and multi-turn conversation hi
 
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass, field
 import json
 import logging
+import random
 import re
-from typing import Any, Dict, List, Optional, Sequence
+import time
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
@@ -18,13 +21,186 @@ from config.settings import get_settings
 logger = logging.getLogger(__name__)
 
 FALLBACK_MODELS = [
-    "gemini-3-flash-preview",
+    "gemini-flash-lite-latest",
     "gemini-3.8-flash",
+    "gemini-3-flash-preview",
     "gemini-flash-latest",
     "gemini-pro-latest",
 ]
 
 _HTTP_SESSION = None
+_LAST_DIAGNOSTIC: Optional[GeminiDiagnosticResult] = None
+
+
+@dataclass
+class GeminiDiagnosticResult:
+    """Safe structured diagnostic record capturing execution outcome, provider status, and latency."""
+
+    success: bool
+    text: str = ""
+    status_code: Optional[int] = None
+    error_type: Optional[str] = None  # "quota_exceeded", "auth_invalid", "permission_denied", "not_found", "bad_request", "server_error", "timeout", "network_error", "malformed_response", "missing_key"
+    provider_code: Optional[Any] = None
+    provider_status: Optional[str] = None
+    provider_message: Optional[str] = None
+    model_used: Optional[str] = None
+    models_attempted: List[str] = field(default_factory=list)
+    retry_count: int = 0
+    duration_seconds: float = 0.0
+    user_friendly_message: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+def get_last_gemini_diagnostic() -> Optional[GeminiDiagnosticResult]:
+    """Retrieve the most recent Gemini diagnostic record."""
+    return _LAST_DIAGNOSTIC
+
+
+def sanitize_error_message(text: str, key: Optional[str] = None) -> str:
+    """Safely redact API keys and sensitive tokens from error text to prevent secret leaks."""
+    if not text:
+        return ""
+    sanitized = str(text)
+    if key and len(key) > 6:
+        sanitized = sanitized.replace(key, "[REDACTED_API_KEY]")
+    # Redact query parameters in URLs like ?key=... or &key=...
+    sanitized = re.sub(r"([?&]key=)[^&\s]+", r"\1[REDACTED_API_KEY]", sanitized)
+    # Redact common Gemini/Google key token formats
+    sanitized = re.sub(r"\bAIza[0-9A-Za-z-_]{35}\b", "[REDACTED_API_KEY]", sanitized)
+    sanitized = re.sub(r"\bAQ\.[0-9A-Za-z-_]{40,}\b", "[REDACTED_API_KEY]", sanitized)
+    return sanitized
+
+
+def classify_http_error(status_code: int, error_data: Dict[str, Any]) -> Tuple[str, str]:
+    """Categorize HTTP error status code and provider payload into structured error types."""
+    msg = error_data.get("message", "")
+    p_status = error_data.get("status", "")
+
+    if status_code == 429 or p_status == "RESOURCE_EXHAUSTED" or "quota" in msg.lower():
+        return "quota_exceeded", msg or "Quota exceeded or rate limit reached"
+    elif status_code == 401 or p_status == "UNAUTHENTICATED":
+        return "auth_invalid", msg or "Invalid or unauthenticated API key"
+    elif status_code == 403 or p_status == "PERMISSION_DENIED":
+        return "permission_denied", msg or "Access forbidden or API not enabled"
+    elif status_code == 404 or p_status == "NOT_FOUND":
+        return "not_found", msg or "Requested model not found or discontinued"
+    elif status_code == 400 or p_status == "INVALID_ARGUMENT":
+        return "bad_request", msg or "Invalid argument or bad request"
+    elif status_code in (500, 502, 503, 504) or p_status in ("INTERNAL", "UNAVAILABLE"):
+        return "server_error", msg or f"Google Gemini upstream server error ({status_code})"
+    else:
+        return f"http_{status_code}", msg or f"HTTP error {status_code}"
+
+
+def is_retryable_error(status_code: Optional[int], exc: Optional[Exception] = None) -> bool:
+    """Determine whether an error is transient and eligible for bounded retries."""
+    if status_code in (429, 500, 502, 503, 504):
+        return True
+    if exc is not None:
+        import requests
+        if isinstance(exc, (requests.Timeout, requests.ConnectionError)):
+            return True
+    return False
+
+
+def compute_backoff_delay(
+    attempt: int,
+    headers: Optional[Dict[str, str]] = None,
+    base_delay: float = 0.5,
+    max_delay: float = 3.0,
+) -> float:
+    """Calculate bounded exponential backoff with jitter, respecting Retry-After header."""
+    if headers:
+        for k, v in headers.items():
+            if k.lower() == "retry-after":
+                try:
+                    val = float(v)
+                    return max(0.1, min(val, max_delay))
+                except (ValueError, TypeError):
+                    pass
+    backoff = base_delay * (2 ** attempt) + random.uniform(0.05, 0.20)
+    return min(backoff, max_delay)
+
+
+def format_user_friendly_error(diag: GeminiDiagnosticResult, article_str: str = "") -> str:
+    """Produce a truthful, specific, and actionable user-facing explanation when generation fails."""
+    art_clause = f" for {article_str}" if article_str else ""
+    if diag.error_type == "missing_key":
+        return (
+            "⚙️ **Gemini AI Synthesis Not Configured**\n\n"
+            "No Gemini API key is configured. Please provide a valid Gemini API key in the sidebar under "
+            "**🔑 Gemini API Settings** or set `GEMINI_API_KEY` in `.env`.\n\n"
+            "🏛️ *The deterministic rule-based answer remains 100% verified against your local Constitution PDF.*"
+        )
+    elif diag.error_type == "quota_exceeded":
+        return (
+            f"⚠️ **Gemini AI Quota / Rate Limit Exceeded** (HTTP 429{art_clause})\n\n"
+            f"Google Gemini reported that current project quota was exhausted for model `{diag.model_used or 'gemini'}`: "
+            f"_{diag.provider_message or 'You exceeded your current quota'}_.\n\n"
+            "💡 *Tip: Wait a few moments before rerunning, or configure a tier key with active quota in sidebar settings.*\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+    elif diag.error_type == "auth_invalid":
+        return (
+            f"❌ **Gemini AI Authentication Failure** (HTTP 401{art_clause})\n\n"
+            "The configured Gemini API key was rejected by Google Generative AI (HTTP 401 Unauthorized). "
+            "Please check and update your API key in the sidebar under **🔑 Gemini API Settings**.\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+    elif diag.error_type == "permission_denied":
+        return (
+            f"🔒 **Gemini AI Permission Denied** (HTTP 403{art_clause})\n\n"
+            f"Access to Google Gemini is forbidden: _{diag.provider_message or 'Permission denied'}_. "
+            "Verify that Generative Language API is enabled in your Google Cloud Console project.\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+    elif diag.error_type == "not_found":
+        return (
+            f"🔍 **Gemini AI Model Not Found** (HTTP 404{art_clause})\n\n"
+            f"The requested model `{diag.model_used}` is discontinued or unavailable. Models attempted: `{', '.join(diag.models_attempted)}`.\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+    elif diag.error_type == "bad_request":
+        return (
+            f"⚠️ **Gemini AI Invalid Request** (HTTP 400{art_clause})\n\n"
+            f"The request payload was rejected: _{diag.provider_message or 'Bad request'}_.\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+    elif diag.error_type == "server_error":
+        return (
+            f"☁️ **Google Gemini Service Unavailable** (HTTP {diag.status_code or 503}{art_clause})\n\n"
+            "Google's generative AI service is experiencing internal errors or high load. Bounded retries were attempted.\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+    elif diag.error_type == "timeout":
+        return (
+            f"⏱️ **Gemini AI Request Timed Out** ({diag.duration_seconds:.1f}s elapsed{art_clause})\n\n"
+            "The Google Gemini API did not respond within the allocated timeout window.\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+    elif diag.error_type == "network_error":
+        return (
+            f"🌐 **Gemini AI Network Connection Error**{art_clause}\n\n"
+            f"Could not connect to Google Generative Language API: _{diag.provider_message or 'Network unreachable'}_.\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+    else:
+        return (
+            f"⚠️ **Gemini AI Synthesis Unavailable**{art_clause}\n\n"
+            f"_{diag.provider_message or 'An unexpected error occurred during synthesis'}_.\n\n"
+            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+        )
+
+
+def clean_constitutional_evidence_text(text: str) -> str:
+    """Normalize PDF extraction artifacts and replacement characters in legal text."""
+    if not text:
+        return ""
+    cleaned = text.replace("\ufffd", "—").replace("\x14", " ").replace("\x00", "")
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    return cleaned.strip()
 
 
 def get_http_session():
@@ -78,20 +254,23 @@ def format_retrieved_evidence(
     if comparison_data:
         art1 = comparison_data["article_1"]
         art2 = comparison_data["article_2"]
+        text1 = clean_constitutional_evidence_text(art1.get("constitutional_text", ""))
+        text2 = clean_constitutional_evidence_text(art2.get("constitutional_text", ""))
         return (
             f"--- GROUNDING EVIDENCE FROM LOADED CONSTITUTION PDF ---\n"
             f"[Article {art1['article_number']}: {art1['article_title']}] (Part: {art1['part']}, PDF Page {art1['page_start']})\n"
-            f"Verbatim Text: {art1['constitutional_text']}\n\n"
+            f"Verbatim Text: {text1}\n\n"
             f"[Article {art2['article_number']}: {art2['article_title']}] (Part: {art2['part']}, PDF Page {art2['page_start']})\n"
-            f"Verbatim Text: {art2['constitutional_text']}\n"
+            f"Verbatim Text: {text2}\n"
             f"-------------------------------------------------------"
         )
 
     if topic and docs:
         snippets = []
         for d in docs[:5]:
+            snippet_text = clean_constitutional_evidence_text(d.get("constitutional_text", "")[:400])
             snippets.append(
-                f"- Article {d['article_number']} ({d['article_title']}, Page {d['page_start']}): {d['constitutional_text'][:400]}"
+                f"- Article {d['article_number']} ({d['article_title']}, Page {d['page_start']}): {snippet_text}"
             )
         return (
             f"--- GROUNDING EVIDENCE FROM LOADED CONSTITUTION PDF ---\n"
@@ -104,10 +283,11 @@ def format_retrieved_evidence(
         sections = []
         for idx, d in enumerate(docs[:3]):
             score_line = f"Rerank Score: {d.get('rerank_score')}/100 ({d.get('rerank_reason', '')})\n" if d.get("rerank_score") is not None else ""
+            clean_body = clean_constitutional_evidence_text(d.get("constitutional_text", ""))
             sections.append(
-                f"[Document #{idx+1}: Article {d.get('article_number', '')} — {d.get('article_title', '')}] (Part: {d.get('part', '')}, Page {d.get('page_start', '')})\n"
+                f"[Document #{idx+1}: Article {d.get('article_number', '')} — {d.get('article_title', '')}] (Article: {d.get('article_number', '')}, Part: {d.get('part', '')}, Page {d.get('page_start', '')})\n"
                 f"{score_line}"
-                f"Verbatim Constitutional Text:\n{d.get('constitutional_text', '')}"
+                f"Verbatim Constitutional Text:\n{clean_body}"
             )
         return (
             f"--- GROUNDING EVIDENCE FROM LOADED CONSTITUTION PDF ---\n"
@@ -152,31 +332,190 @@ def clean_gemini_response(text: str) -> str:
     return result or text
 
 
-def generate_gemini_constitutional_response(
+def execute_gemini_request_with_diagnostics(
+    prompt: str,
+    api_key: Optional[str] = None,
+    article_label: str = "",
+    timeout: int = 25,
+    max_retries_per_model: int = 1,
+    models: Optional[List[str]] = None,
+) -> GeminiDiagnosticResult:
+    """Execute Gemini generation with safe structured diagnostics, bounded retries, and truthful error categorization."""
+    global _LAST_DIAGNOSTIC
+    import requests
+
+    settings = get_settings()
+    key = (api_key or settings.gemini_api_key or "").strip()
+
+    if not key:
+        diag = GeminiDiagnosticResult(
+            success=False,
+            error_type="missing_key",
+            status_code=None,
+            provider_message="Gemini API key is not configured.",
+        )
+        diag.user_friendly_message = format_user_friendly_error(diag, article_label)
+        diag.text = diag.user_friendly_message
+        _LAST_DIAGNOSTIC = diag
+        return diag
+
+    models_to_try = list(models or FALLBACK_MODELS)
+    models_attempted: List[str] = []
+    total_retries = 0
+    t_global_start = time.perf_counter()
+
+    last_status: Optional[int] = None
+    last_error_type: str = "unknown"
+    last_p_code: Optional[Any] = None
+    last_p_status: Optional[str] = None
+    last_p_msg: Optional[str] = None
+    last_model: Optional[str] = None
+
+    session = get_http_session()
+
+    for model_name in models_to_try:
+        models_attempted.append(model_name)
+        last_model = model_name
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+
+        for attempt in range(max_retries_per_model + 1):
+            t_req_start = time.perf_counter()
+            try:
+                resp = session.post(
+                    url,
+                    json={"contents": [{"parts": [{"text": prompt}]}]},
+                    timeout=timeout,
+                )
+                duration = time.perf_counter() - t_req_start
+
+                if resp.status_code == 200:
+                    try:
+                        data = resp.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts and "text" in parts[0]:
+                                raw_ans = parts[0]["text"].strip()
+                                cleaned = clean_gemini_response(raw_ans)
+                                diag = GeminiDiagnosticResult(
+                                    success=True,
+                                    text=cleaned,
+                                    status_code=200,
+                                    model_used=model_name,
+                                    models_attempted=models_attempted,
+                                    retry_count=total_retries,
+                                    duration_seconds=round(time.perf_counter() - t_global_start, 3),
+                                    user_friendly_message="",
+                                )
+                                _LAST_DIAGNOSTIC = diag
+                                return diag
+                    except Exception as json_err:
+                        last_error_type = "malformed_response"
+                        last_p_msg = f"Failed to parse response JSON: {json_err}"
+                        break
+
+                    last_status = 200
+                    last_error_type = "malformed_response"
+                    last_p_msg = "Gemini returned empty candidate content or parts."
+                    break
+
+                # Non-200 Response
+                last_status = resp.status_code
+                err_dict = {}
+                try:
+                    err_dict = resp.json().get("error", {})
+                except Exception:
+                    pass
+
+                last_p_code = err_dict.get("code", resp.status_code)
+                last_p_status = err_dict.get("status", "")
+                raw_msg = err_dict.get("message") or resp.text[:200]
+                last_p_msg = sanitize_error_message(raw_msg, key)
+                last_error_type, _ = classify_http_error(resp.status_code, err_dict)
+
+                logger.warning(
+                    "Gemini model %s returned status %d (%s): %s",
+                    model_name,
+                    resp.status_code,
+                    last_error_type,
+                    last_p_msg[:120],
+                )
+
+                # Permanent client errors: 400, 401, 403 do not succeed on retry or other models
+                if resp.status_code in (400, 401, 403):
+                    break
+
+                # 404: Model not found / discontinued -> fail fast on this model, try next model
+                if resp.status_code == 404:
+                    break
+
+                # 429, 500, 503: Transient retryable errors
+                if is_retryable_error(resp.status_code) and attempt < max_retries_per_model:
+                    total_retries += 1
+                    delay = compute_backoff_delay(attempt, resp.headers)
+                    time.sleep(delay)
+                    continue
+
+                break
+
+            except requests.Timeout as t_err:
+                last_status = None
+                last_error_type = "timeout"
+                last_p_msg = sanitize_error_message(str(t_err), key)
+                logger.warning("Gemini model %s timed out after %ds", model_name, timeout)
+                if attempt < max_retries_per_model:
+                    total_retries += 1
+                    time.sleep(compute_backoff_delay(attempt))
+                    continue
+                break
+
+            except requests.RequestException as req_err:
+                last_status = None
+                last_error_type = "network_error"
+                last_p_msg = sanitize_error_message(str(req_err), key)
+                logger.warning("Gemini model %s network error: %s", model_name, last_p_msg)
+                if attempt < max_retries_per_model:
+                    total_retries += 1
+                    time.sleep(compute_backoff_delay(attempt))
+                    continue
+                break
+
+        # If permanent auth/permission error, fail fast without trying other models
+        if last_status in (401, 403):
+            break
+
+    total_duration = round(time.perf_counter() - t_global_start, 3)
+    final_diag = GeminiDiagnosticResult(
+        success=False,
+        status_code=last_status,
+        error_type=last_error_type,
+        provider_code=last_p_code,
+        provider_status=last_p_status,
+        provider_message=last_p_msg,
+        model_used=last_model,
+        models_attempted=models_attempted,
+        retry_count=total_retries,
+        duration_seconds=total_duration,
+    )
+    final_diag.user_friendly_message = format_user_friendly_error(final_diag, article_label)
+    final_diag.text = final_diag.user_friendly_message
+    _LAST_DIAGNOSTIC = final_diag
+    return final_diag
+
+
+def generate_gemini_with_diagnostics(
     question: str,
     retrieved_docs: List[Dict[str, Any]],
-    conversation_history: Sequence[BaseMessage],
+    conversation_history: Sequence[BaseMessage] = (),
     comparison_data: Optional[Dict[str, Any]] = None,
     topic: Optional[str] = None,
     api_key: Optional[str] = None,
     user_memories: Optional[List[Dict[str, Any]]] = None,
-) -> str:
-    """Generate an AI response using Google Gemini, grounded in PDF evidence, chat history, and Mem0 memories."""
-    import requests
-
-    settings = get_settings()
-    key = (api_key or settings.gemini_api_key).strip()
-
-    if not key:
-        return (
-            "*Gemini AI synthesis is not configured. Please provide a valid Gemini API key "
-            "in the sidebar or through the `GEMINI_API_KEY` environment variable.*"
-        )
-
+) -> GeminiDiagnosticResult:
+    """Generate Gemini response and return full structured diagnostics."""
+    art_str = f"Article {retrieved_docs[0]['article_number']}" if retrieved_docs and retrieved_docs[0].get("article_number") else ""
     history_str = format_conversation_history(conversation_history)
-    evidence_str = format_retrieved_evidence(
-        retrieved_docs, comparison_data=comparison_data, topic=topic
-    )
+    evidence_str = format_retrieved_evidence(retrieved_docs, comparison_data=comparison_data, topic=topic)
 
     mem_section = ""
     if user_memories:
@@ -186,11 +525,7 @@ def generate_gemini_constitutional_response(
             if text:
                 mem_lines.append(f"- {text}")
         if mem_lines:
-            mem_section = (
-                "=== MEM0 PERSISTENT USER MEMORIES & CONTEXT ===\n"
-                + "\n".join(mem_lines)
-                + "\n\n"
-            )
+            mem_section = "=== MEM0 PERSISTENT USER MEMORIES & CONTEXT ===\n" + "\n".join(mem_lines) + "\n\n"
 
     system_instruction = (
         "You are an expert constitutional legal assistant specializing in the Constitution of India. "
@@ -217,56 +552,38 @@ def generate_gemini_constitutional_response(
         f"Provide your comprehensive, accessible response based on the above evidence and context. Jump directly into the answer without introductory phrases."
     )
 
-    # 1. Primary: Direct REST call with fast timeout and persistent HTTP connection
-    session = get_http_session()
-    for model_name in FALLBACK_MODELS:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
-        try:
-            resp = session.post(
-                url,
-                json={"contents": [{"parts": [{"text": prompt}]}]},
-                timeout=25,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                candidates = data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts and "text" in parts[0]:
-                        raw_ans = parts[0]["text"].strip()
-                        return clean_gemini_response(raw_ans)
-            else:
-                logger.warning("REST model %s returned status %d: %s", model_name, resp.status_code, resp.text[:120])
-        except Exception as req_err:
-            logger.warning("REST call to %s failed: %s", model_name, req_err)
-
-    # 2. Secondary fallback using google-genai client library
-    try:
-        from google import genai
-
-        client = genai.Client(api_key=key)
-        for model_name in FALLBACK_MODELS:
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                )
-                if response and response.text:
-                    return clean_gemini_response(response.text.strip())
-            except Exception as model_err:
-                logger.warning("google-genai model %s failed: %s", model_name, model_err)
-    except Exception as lib_err:
-        logger.warning("google-genai client failed: %s", lib_err)
-
-    art_str = f" Article {retrieved_docs[0]['article_number']}" if retrieved_docs and retrieved_docs[0].get("article_number") else ""
-    return (
-        f"⚠️ *Gemini AI synthesis is temporarily unavailable or rate-limited for{art_str}. "
-        "The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+    return execute_gemini_request_with_diagnostics(
+        prompt=prompt,
+        api_key=api_key,
+        article_label=art_str,
     )
 
 
+def generate_gemini_constitutional_response(
+    question: str,
+    retrieved_docs: List[Dict[str, Any]],
+    conversation_history: Sequence[BaseMessage] = (),
+    comparison_data: Optional[Dict[str, Any]] = None,
+    topic: Optional[str] = None,
+    api_key: Optional[str] = None,
+    user_memories: Optional[List[Dict[str, Any]]] = None,
+) -> str:
+    """Generate an AI response using Google Gemini, grounded in PDF evidence, chat history, and Mem0 memories."""
+    diag = generate_gemini_with_diagnostics(
+        question=question,
+        retrieved_docs=retrieved_docs,
+        conversation_history=conversation_history,
+        comparison_data=comparison_data,
+        topic=topic,
+        api_key=api_key,
+        user_memories=user_memories,
+    )
+    return diag.text
+
+
 REWRITE_MODELS = [
-    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.8-flash",
     "gemini-flash-latest",
 ]
 
