@@ -52,5 +52,8 @@ class ConstitutionState(TypedDict, total=False):
     mem0_memories: Optional[List[Dict[str, Any]]]
     event_log: Optional[List[str]]
     prior_user_query: Optional[str]
+    candidate_documents: Optional[List[Dict[str, Any]]]
+    rerank_mode: Optional[str]
+    rerank_metadata: Optional[Dict[str, Any]]
     selected_engine: Optional[str]
     execution_time_seconds: Optional[float]

@@ -96,14 +96,18 @@ def format_retrieved_evidence(
         )
 
     if docs:
-        d = docs[0]
+        sections = []
+        for idx, d in enumerate(docs[:3]):
+            score_line = f"Rerank Score: {d.get('rerank_score')}/100 ({d.get('rerank_reason', '')})\n" if d.get("rerank_score") is not None else ""
+            sections.append(
+                f"[Document #{idx+1}: Article {d.get('article_number', '')} — {d.get('article_title', '')}] (Part: {d.get('part', '')}, Page {d.get('page_start', '')})\n"
+                f"{score_line}"
+                f"Verbatim Constitutional Text:\n{d.get('constitutional_text', '')}"
+            )
         return (
             f"--- GROUNDING EVIDENCE FROM LOADED CONSTITUTION PDF ---\n"
-            f"Article: {d['article_number']} — {d['article_title']}\n"
-            f"Part: {d['part']} ({d.get('part_title', '')})\n"
-            f"Source Document: {d.get('source_pdf', 'constitution.pdf')} (Page {d['page_start']})\n"
-            f"Verbatim Constitutional Text:\n{d['constitutional_text']}\n"
-            f"-------------------------------------------------------"
+            + "\n\n".join(sections)
+            + "\n-------------------------------------------------------"
         )
 
     return "No specific constitutional articles matched in local PDF."

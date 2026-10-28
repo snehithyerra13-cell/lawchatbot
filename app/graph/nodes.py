@@ -632,9 +632,10 @@ def retrieve_constitution(state: ConstitutionState) -> Dict[str, Any]:
     """Node 3: Search the locally extracted Constitution PDF content via Subgraph.
     
     Executes the modular RetrievalAndVerificationSubgraph, isolating search,
-    scoring, and provenance verification.
+    scoring, and provenance verification. Supports RAG Reranking with Human-in-the-Loop decision.
     """
     from app.graph.subgraphs import retrieval_subgraph
+    from app.retrieval.reranker import rerank_candidates
 
     sub_input = {
         "question": state.get("question", ""),
@@ -644,13 +645,41 @@ def retrieve_constitution(state: ConstitutionState) -> Dict[str, Any]:
         "topic": state.get("topic"),
     }
     sub_output = retrieval_subgraph.invoke(sub_input)
+    raw_candidates = sub_output.get("retrieved_documents", [])
+    requires_review = sub_output.get("requires_human_review", False)
+
+    rerank_mode = state.get("rerank_mode")
+    if rerank_mode == "rerank":
+        final_docs, r_meta = rerank_candidates(
+            query=state.get("question", ""),
+            candidates=raw_candidates,
+        )
+    elif rerank_mode == "hitl_decide":
+        final_docs = raw_candidates
+        r_meta = {"method": "hitl_pending", "count": len(raw_candidates), "status": "Pending Human Decision"}
+        requires_review = True
+    else:
+        final_docs = raw_candidates
+        r_meta = {"method": "none", "count": len(raw_candidates), "status": "Direct Retrieval (No Rerank)"}
+
+    # Rebuild sources to reflect final docs order
+    sources = [
+        {
+            "source_pdf": d.get("source_pdf", "constitution.pdf"),
+            "page": d.get("page_start", ""),
+            "article": d.get("article_number", ""),
+        }
+        for d in final_docs
+    ] if final_docs else sub_output.get("sources", [])
 
     return {
-        "retrieved_documents": sub_output.get("retrieved_documents", []),
+        "candidate_documents": raw_candidates,
+        "retrieved_documents": final_docs,
         "comparison_data": sub_output.get("comparison_data"),
-        "sources": sub_output.get("sources", []),
+        "sources": sources,
         "topic": sub_output.get("topic", state.get("topic")),
-        "requires_human_review": sub_output.get("requires_human_review", False),
+        "requires_human_review": requires_review,
+        "rerank_metadata": r_meta,
         "subgraph_metadata": {
             "verification_status": sub_output.get("verification_status", "UNKNOWN"),
             "audit_notes": sub_output.get("audit_notes", []),
@@ -1012,6 +1041,7 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
             "selected_engine": choice,
             "sources": sources,
             "retrieved_documents": retrieved,
+            "rerank_metadata": state.get("rerank_metadata"),
             "execution_time_seconds": exec_time,
             "article_number": state.get("article_number") or state.get("last_discussed_article"),
             "topic": state.get("topic"),

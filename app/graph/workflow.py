@@ -151,6 +151,7 @@ def run_constitution_chat(
     checkpoint_id: Optional[str] = None,
     selected_engine: Optional[str] = "both",
     user_id: Optional[str] = None,
+    rerank_mode: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute a turn in the conversation thread and return updated state.
     
@@ -161,6 +162,7 @@ def run_constitution_chat(
     - Stores: Updates cross-thread knowledge in Store
     - Performance: Tracks precise execution time in seconds
     - Identity & Mem0 Memory: Associates execution turn with user_id
+    - RAG Reranking: Human-in-the-Loop decision between reranking and direct retrieval
     """
     t_start = time.perf_counter()
     interrupt_nodes = ["finalize_response"] if enable_interrupt else None
@@ -174,6 +176,7 @@ def run_constitution_chat(
         "question": question,
         "selected_engine": selected_engine or "both",
         "user_id": user_id or "default_user",
+        "rerank_mode": rerank_mode or "no_rerank",
     }
 
     config: Dict[str, Any] = {"configurable": {"thread_id": thread_id}}
@@ -209,6 +212,7 @@ def run_constitution_chat_stream(
     checkpoint_id: Optional[str] = None,
     selected_engine: Optional[str] = "both",
     user_id: Optional[str] = None,
+    rerank_mode: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, Dict[str, Any]]:
     """Execute a turn yielding LangGraph node events in real-time (Event Streaming).
     
@@ -229,6 +233,7 @@ def run_constitution_chat_stream(
         "question": question,
         "selected_engine": selected_engine or "both",
         "user_id": user_id or "default_user",
+        "rerank_mode": rerank_mode or "no_rerank",
     }
 
     config: Dict[str, Any] = {"configurable": {"thread_id": thread_id}}
@@ -370,15 +375,51 @@ def resume_constitution_chat(
     checkpointer: Optional[BaseCheckpointSaver] = None,
     store: Optional[Any] = None,
     selected_engine: Optional[str] = "both",
+    rerank_choice: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Resume execution of an interrupted thread with human engine choice (Human-in-the-Loop)."""
+    """Resume execution of an interrupted thread with human engine and reranking choices (Human-in-the-Loop)."""
     t_start = time.perf_counter()
     graph = get_compiled_graph(
         checkpointer=checkpointer, store=store, interrupt_nodes=["finalize_response"]
     )
     config = {"configurable": {"thread_id": thread_id}}
+    state_update: Dict[str, Any] = {}
     if selected_engine:
-        graph.update_state(config, {"selected_engine": selected_engine})
+        state_update["selected_engine"] = selected_engine
+
+    if rerank_choice:
+        state_update["rerank_mode"] = rerank_choice
+        current_state = graph.get_state(config)
+        vals = (current_state.values if current_state else {}) or {}
+        cands = vals.get("candidate_documents") or vals.get("retrieved_documents") or []
+        if rerank_choice == "rerank" and cands:
+            from app.retrieval.reranker import rerank_candidates
+            reranked_docs, r_meta = rerank_candidates(
+                query=vals.get("question", ""),
+                candidates=cands,
+            )
+            state_update["retrieved_documents"] = reranked_docs
+            state_update["rerank_metadata"] = r_meta
+
+            # Regenerate Gemini answer using the freshly reranked top evidence
+            from app.retrieval.gemini_service import generate_gemini_constitutional_response
+            try:
+                state_update["gemini_answer"] = generate_gemini_constitutional_response(
+                    question=vals.get("question", ""),
+                    retrieved_docs=reranked_docs,
+                    conversation_history=vals.get("messages", []),
+                    comparison_data=vals.get("comparison_data"),
+                    topic=vals.get("topic"),
+                    user_memories=vals.get("mem0_memories", []),
+                )
+            except Exception as e:
+                logger.warning("Error regenerating gemini answer on rerank: %s", e)
+        elif rerank_choice == "no_rerank":
+            state_update["rerank_metadata"] = {"method": "none", "count": len(cands), "status": "Direct Retrieval (No Rerank)"}
+
+    if state_update:
+        graph.update_state(config, state_update)
+
     result = graph.invoke(None, config=config)
 
     duration = round(time.perf_counter() - t_start, 3)

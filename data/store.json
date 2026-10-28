@@ -1,15 +1,17 @@
 {
   "bookmarks": {
-    "lawyer_kumar@delhi_bar_in": {},
-    "snehithyerra13@gmail_com": {}
+    "lawyer_kumar_delhi_bar_in": {},
+    "snehithyerra13_gmail_com": {},
+    "user_default": {}
   },
   "profile": {
-    "lawyer_kumar@delhi_bar_in": {
+    "advocate_guest": {},
+    "lawyer_kumar_delhi_bar_in": {
       "preferences": {
         "tone": "Plain English"
       }
     },
-    "snehithyerra13@gmail_com": {
+    "snehithyerra13_gmail_com": {
       "preferences": {
         "tone": "Academic"
       }

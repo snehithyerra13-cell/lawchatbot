@@ -21,9 +21,12 @@ from app.retrieval.pdf_processor import (
     verify_pdf,
 )
 
+from app.retrieval.reranker import rerank_candidates
+
 __all__ = [
     "ConstitutionalKnowledgeBase",
     "get_knowledge_base",
+    "rerank_candidates",
     "LANDMARK_PROVISIONS",
     "TOPIC_CATALOG",
     "parse_constitution_documents",

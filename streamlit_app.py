@@ -175,6 +175,7 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
         topic = kwargs.get("topic")
         resp_type = kwargs.get("response_type")
         intent = kwargs.get("intent")
+        rerank_meta = kwargs.get("rerank_metadata")
     elif isinstance(msg_or_result, dict):
         exec_time = msg_or_result.get("execution_time_seconds")
         sources = msg_or_result.get("sources") or []
@@ -183,6 +184,7 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
         topic = msg_or_result.get("topic")
         resp_type = msg_or_result.get("response_type")
         intent = msg_or_result.get("intent")
+        rerank_meta = msg_or_result.get("rerank_metadata")
     else:
         return {}
 
@@ -211,6 +213,9 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
         "docs": docs,
         "response_type": resp_type,
         "intent": intent,
+        "rerank_score": d0.get("rerank_score"),
+        "rerank_reason": d0.get("rerank_reason"),
+        "rerank_metadata": rerank_meta,
     }
 
 
@@ -237,7 +242,13 @@ def render_source_sidebar_card(info: Dict[str, Any]) -> None:
 
     art_label = f"Article {info['article_number']}" if info['article_number'] else "Constitutional Subject"
 
-    card_html = f"""<div style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #cbd5e1; border-left: 4px solid #1a73e8; border-radius: 10px; padding: 12px 14px; margin-top: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);"><div style="font-weight: 700; color: #0f172a; font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;"><span style="display: flex; align-items: center; gap: 5px;">📚 Source Provenance</span><span style="font-size: 0.70rem; color: #16a34a; background: #dcfce7; padding: 1px 6px; border-radius: 8px; font-weight: 700;">VERIFIED</span></div><div style="font-size: 0.80rem; color: #334155; line-height: 1.55;"><div style="margin-bottom: 3px;"><strong>📄 Document:</strong> <code>{info['source_pdf']}</code></div><div style="margin-bottom: 3px;"><strong>📖 Citation:</strong> <strong style="color: #1a73e8; background: #e0f2fe; padding: 1px 6px; border-radius: 6px;">{info['page_str']}</strong></div><div style="margin-bottom: 3px;"><strong>🏛️ Part:</strong> {info['part']}</div><div style="margin-bottom: 3px;"><strong>📜 Provision:</strong> {art_label}</div>{time_badge}</div></div>"""
+    rerank_html = ""
+    if info.get("rerank_score") is not None:
+        rerank_html = f"""<div style="margin-bottom: 3px;"><strong>🔄 RAG Rerank:</strong> <span style="color: #6b21a8; background: #f3e8ff; padding: 1px 6px; border-radius: 6px; font-weight: 700; font-size: 0.76rem;">Score {info['rerank_score']}/100</span></div>"""
+    elif info.get("rerank_metadata") and info["rerank_metadata"].get("method") == "none":
+        rerank_html = """<div style="margin-bottom: 3px;"><strong>⚡ RAG Retrieval:</strong> <span style="color: #0369a1; background: #e0f2fe; padding: 1px 6px; border-radius: 6px; font-weight: 700; font-size: 0.76rem;">Direct (No Rerank)</span></div>"""
+
+    card_html = f"""<div style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #cbd5e1; border-left: 4px solid #1a73e8; border-radius: 10px; padding: 12px 14px; margin-top: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);"><div style="font-weight: 700; color: #0f172a; font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;"><span style="display: flex; align-items: center; gap: 5px;">📚 Source Provenance</span><span style="font-size: 0.70rem; color: #16a34a; background: #dcfce7; padding: 1px 6px; border-radius: 8px; font-weight: 700;">VERIFIED</span></div><div style="font-size: 0.80rem; color: #334155; line-height: 1.55;"><div style="margin-bottom: 3px;"><strong>📄 Document:</strong> <code>{info['source_pdf']}</code></div><div style="margin-bottom: 3px;"><strong>📖 Citation:</strong> <strong style="color: #1a73e8; background: #e0f2fe; padding: 1px 6px; border-radius: 6px;">{info['page_str']}</strong></div><div style="margin-bottom: 3px;"><strong>🏛️ Part:</strong> {info['part']}</div><div style="margin-bottom: 3px;"><strong>📜 Provision:</strong> {art_label}</div>{rerank_html}{time_badge}</div></div>"""
     st.markdown(card_html, unsafe_allow_html=True)
 
     if info.get("docs") and len(info["docs"]) > 1:
@@ -312,6 +323,7 @@ def execute_query_chatgpt_style(
     thread_id: str,
     selected_engine: str = "both",
     enable_interrupt: bool = False,
+    rerank_mode: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute query with ChatGPT-style dynamic reasoning progression and continuous live stopwatch.
 
@@ -341,6 +353,7 @@ def execute_query_chatgpt_style(
                 enable_interrupt=enable_interrupt,
                 selected_engine=selected_engine,
                 user_id=user_id,
+                rerank_mode=rerank_mode,
             ):
                 event_queue.put(update)
         except Exception as e:
@@ -1082,6 +1095,37 @@ with st.sidebar:
         help="When enabled, LangGraph pauses execution before finalization to ask permission. Kept OFF by default so answers generate directly without asking below again.",
     )
 
+    # Feature: RAG Retrieval & Reranker Strategy (with Human-in-the-Loop decision)
+    with st.expander("🎯 RAG Retrieval & Reranker Strategy", expanded=True):
+        st.markdown("**Second-Stage Retrieval Reranker**")
+        rerank_options = [
+            "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)",
+            "🔄 Always Rerank (Gemini AI Semantic Scoring)",
+            "⚡ Direct Retrieval (No Reranking)",
+        ]
+        if "rag_rerank_choice" not in st.session_state:
+            st.session_state.rag_rerank_choice = "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)"
+
+        current_rerank_idx = (
+            rerank_options.index(st.session_state.rag_rerank_choice)
+            if st.session_state.rag_rerank_choice in rerank_options
+            else 0
+        )
+        chosen_rerank = st.radio(
+            "Reranking Mode:",
+            rerank_options,
+            index=current_rerank_idx,
+            help="Choose whether candidate constitutional articles are reranked via Gemini or whether human in the loop decides per turn.",
+        )
+        st.session_state.rag_rerank_choice = chosen_rerank
+
+        if chosen_rerank == "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)":
+            st.caption("ℹ️ Execution will pause before answering so you can inspect candidate articles and decide whether to rerank.")
+        elif chosen_rerank == "🔄 Always Rerank (Gemini AI Semantic Scoring)":
+            st.caption("ℹ️ Candidate articles from database are automatically scored (0-100) and reordered by Gemini.")
+        else:
+            st.caption("ℹ️ Pure first-stage direct database retrieval without second-stage reranking.")
+
     with st.expander("🔑 Gemini API Settings", expanded=False):
         api_key_val = st.text_input(
             "Gemini API Key",
@@ -1514,14 +1558,29 @@ if st.session_state.pending_interrupt:
                     </div>
                 </div>
                 <p style="margin: 0; color: #78350f; font-size: 0.92rem; font-weight: 500;">
-                    Execution is paused at the LangGraph breakpoint. <strong>Please choose which engine you permit me to use to generate and reply with your answer:</strong>
+                    Execution is paused at the LangGraph breakpoint. <strong>Please decide whether to apply Gemini Semantic Reranking and grant permission to answer:</strong>
                 </p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown("##### 🎯 Choose One Option to Grant Permission & Receive Answer:")
+        cand_list = paused_result.get("candidate_documents") or paused_result.get("retrieved_documents") or []
+        if len(cand_list) > 1:
+            cand_summary = ", ".join([f"Article {c.get('article_number')}" for c in cand_list[:5]])
+            st.caption(f"📚 **{len(cand_list)} Candidate Provisions in Database**: {cand_summary}")
+
+        st.markdown("###### 🔍 Human Decision: RAG Second-Stage Reranking:")
+        hitl_rerank_choice = st.radio(
+            "Reranking Strategy:",
+            ["🔄 Apply Gemini Semantic Reranking (AI Cross-Scoring)", "⚡ Direct Retrieval (No Reranking)"],
+            horizontal=True,
+            key="hitl_radio_rerank",
+            help="Choose whether Gemini should score and reorder candidate articles, or use direct database ranking.",
+        )
+        selected_rerank_val = "rerank" if "Apply Gemini" in hitl_rerank_choice else "no_rerank"
+
+        st.markdown("##### 🎯 Choose Engine to Grant Permission & Receive Answer:")
         is_mode_rule = (active_engine_mode == "rule_based")
         is_mode_gemini = (active_engine_mode == "gemini")
         is_mode_both = (active_engine_mode == "both")
@@ -1529,45 +1588,57 @@ if st.session_state.pending_interrupt:
         col_c1, col_c2, col_c3, col_c4 = st.columns([1.1, 1.1, 1.1, 0.7])
 
         with col_c1:
-            lbl_rule = "🏛️ Rule-Based Only (Chat Default)" if is_mode_rule else "🏛️ Rule-Based Engine Only"
+            lbl_rule = "🏛️ Rule-Based Only" if not is_mode_rule else "🏛️ Rule-Based (Default)"
             if st.button(lbl_rule, key="hitl_btn_rule", use_container_width=True, type="primary" if is_mode_rule else "secondary"):
                 with st.spinner("🏛️ Finalizing Rule-Based answer..."):
                     res = resume_constitution_chat(
-                        active_thread, checkpointer=checkpointer, store=global_store, selected_engine="rule_based"
+                        active_thread,
+                        checkpointer=checkpointer,
+                        store=global_store,
+                        selected_engine="rule_based",
+                        rerank_choice=selected_rerank_val,
                     )
                 st.session_state.pending_interrupt = None
                 st.session_state.just_streamed_thread = active_thread
                 st.session_state.just_streamed_choice = "rule_based"
                 conv_db.update_conversation(active_thread)
-                st.toast("Permission granted: Rule-Based Engine", icon="🏛️")
+                st.toast(f"Permission granted: Rule-Based ({selected_rerank_val})", icon="🏛️")
                 st.rerun()
 
         with col_c2:
-            lbl_gemini = "✨ Gemini AI Only (Chat Default)" if is_mode_gemini else "✨ Gemini AI LLM Only"
+            lbl_gemini = "✨ Gemini AI Only" if not is_mode_gemini else "✨ Gemini AI (Default)"
             if st.button(lbl_gemini, key="hitl_btn_gemini", use_container_width=True, type="primary" if is_mode_gemini else "secondary"):
                 with st.spinner("✨ Finalizing Gemini AI answer..."):
                     res = resume_constitution_chat(
-                        active_thread, checkpointer=checkpointer, store=global_store, selected_engine="gemini"
+                        active_thread,
+                        checkpointer=checkpointer,
+                        store=global_store,
+                        selected_engine="gemini",
+                        rerank_choice=selected_rerank_val,
                     )
                 st.session_state.pending_interrupt = None
                 st.session_state.just_streamed_thread = active_thread
                 st.session_state.just_streamed_choice = "gemini"
                 conv_db.update_conversation(active_thread)
-                st.toast("Permission granted: Gemini AI LLM", icon="✨")
+                st.toast(f"Permission granted: Gemini AI ({selected_rerank_val})", icon="✨")
                 st.rerun()
 
         with col_c3:
-            lbl_both = "⚖️ Both Engines (Chat Default)" if is_mode_both else "⚖️ Both Engines (Dual View)"
+            lbl_both = "⚖️ Both Engines" if not is_mode_both else "⚖️ Both Engines (Default)"
             if st.button(lbl_both, key="hitl_btn_both", use_container_width=True, type="primary" if is_mode_both else "secondary"):
                 with st.spinner("⚖️ Finalizing Dual View..."):
                     res = resume_constitution_chat(
-                        active_thread, checkpointer=checkpointer, store=global_store, selected_engine="both"
+                        active_thread,
+                        checkpointer=checkpointer,
+                        store=global_store,
+                        selected_engine="both",
+                        rerank_choice=selected_rerank_val,
                     )
                 st.session_state.pending_interrupt = None
                 st.session_state.just_streamed_thread = active_thread
                 st.session_state.just_streamed_choice = "both"
                 conv_db.update_conversation(active_thread)
-                st.toast("Permission granted: Both Engines", icon="⚖️")
+                st.toast(f"Permission granted: Dual View ({selected_rerank_val})", icon="⚖️")
                 st.rerun()
 
         with col_c4:
@@ -1605,12 +1676,18 @@ if active_query and active_query.strip():
         st.markdown(f"**{clean_query}**")
 
     # Execute LangGraph turn with ChatGPT-style dynamic step progression
+    chosen_rerank_pref = st.session_state.get("rag_rerank_choice", "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)")
+    is_hitl_rerank = (chosen_rerank_pref == "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)")
+    eff_enable_interrupt = bool(st.session_state.enable_human_review or is_hitl_rerank)
+    eff_rerank_mode = "hitl_decide" if is_hitl_rerank else ("rerank" if "Always Rerank" in chosen_rerank_pref else "no_rerank")
+
     with st.chat_message("assistant", avatar="⚖️"):
         result = execute_query_chatgpt_style(
             clean_query,
             active_thread,
             selected_engine=active_engine_mode,
-            enable_interrupt=st.session_state.enable_human_review,
+            enable_interrupt=eff_enable_interrupt,
+            rerank_mode=eff_rerank_mode,
         )
 
         if result.get("interrupted"):
