@@ -87,7 +87,7 @@ def rerank_candidates(
         return [doc], {"method": "direct", "count": 1, "status": "Single match"}
 
     settings = get_settings()
-    key = (api_key or settings.gemini_api_key).strip()
+    key = settings.gemini_api_key.strip() if api_key is None else api_key.strip()
 
     # 1. Try Gemini LLM Semantic Reranking if key is present
     if key:

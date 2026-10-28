@@ -1,6 +1,13 @@
 {
-  "timestamp": "2026-10-28T15:43:19.118977+00:00",
+  "timestamp": "2026-10-28T15:50:00.778452+00:00",
   "total_queries": 25,
+  "benchmark_duration_ms": 456.78,
+  "timing_summary": {
+    "avg_stage1_normal_ms": 17.12,
+    "avg_stage2_rerank_ms": 0.11,
+    "avg_total_query_ms": 17.23,
+    "stage2_latency_overhead_ms": -17.01
+  },
   "metrics_summary": {
     "mrr": {
       "stage1": 0.8089,
@@ -41,11 +48,14 @@
   "transitions": {
     "improved_queries": 3,
     "unchanged_queries": 17,
-    "regressed_queries": 5
+    "regressed_queries": 5,
+    "top_chunk_switches": 7
   },
   "category_summary": {
     "exact_article_lookup": {
       "query_count": 5,
+      "avg_stage1_ms": 8.09,
+      "avg_stage2_ms": 0.07,
       "mrr_stage1": 1.0,
       "mrr_stage2": 1.0,
       "ndcg5_stage1": 0.9006,
@@ -58,6 +68,8 @@
     },
     "paraphrase": {
       "query_count": 5,
+      "avg_stage1_ms": 32.02,
+      "avg_stage2_ms": 0.2,
       "mrr_stage1": 0.6444,
       "mrr_stage2": 0.5267,
       "ndcg5_stage1": 0.5196,
@@ -70,6 +82,8 @@
     },
     "conceptual_query": {
       "query_count": 5,
+      "avg_stage1_ms": 24.91,
+      "avg_stage2_ms": 0.15,
       "mrr_stage1": 0.7,
       "mrr_stage2": 0.375,
       "ndcg5_stage1": 0.6704,
@@ -82,6 +96,8 @@
     },
     "multi_article_query": {
       "query_count": 5,
+      "avg_stage1_ms": 13.57,
+      "avg_stage2_ms": 0.1,
       "mrr_stage1": 0.7,
       "mrr_stage2": 0.8,
       "ndcg5_stage1": 0.5715,
@@ -94,6 +110,8 @@
     },
     "hard_negative": {
       "query_count": 5,
+      "avg_stage1_ms": 7.01,
+      "avg_stage2_ms": 0.05,
       "mrr_stage1": 1.0,
       "mrr_stage2": 1.0,
       "ndcg5_stage1": 0.8775,
@@ -116,6 +134,11 @@
       "relevant_chunk_ids": [
         "const_14_p37_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.26,
+        "stage2_rerank_ms": 0.01,
+        "total_ms": 0.27
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_14_p37_c01"
@@ -149,9 +172,24 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_14_p37_c01",
+        "stage2_top_chunk": "const_14_p37_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_14_p37_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          }
+        ]
       }
     },
     {
@@ -164,6 +202,11 @@
       "relevant_chunk_ids": [
         "const_21_p42_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.02,
+        "stage2_rerank_ms": 0.0,
+        "total_ms": 0.02
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_21_p42_c01"
@@ -197,9 +240,24 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_21_p42_c01",
+        "stage2_top_chunk": "const_21_p42_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_21_p42_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          }
+        ]
       }
     },
     {
@@ -213,6 +271,11 @@
         "const_32_p50_c01",
         "const_32_p50_c02"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.17,
+        "total_ms": 0.18
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_32_p50_c01",
@@ -250,9 +313,32 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_32_p50_c01",
+        "stage2_top_chunk": "const_32_p50_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_32_p50_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_32_p50_c02",
+            "initial_rank": 2,
+            "reranked_rank": 2,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 2
+          }
+        ]
       }
     },
     {
@@ -265,6 +351,11 @@
       "relevant_chunk_ids": [
         "const_51a_p56_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.0,
+        "total_ms": 0.01
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_51a_p56_c01"
@@ -298,9 +389,24 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_51a_p56_c01",
+        "stage2_top_chunk": "const_51a_p56_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_51a_p56_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          }
+        ]
       }
     },
     {
@@ -313,6 +419,11 @@
       "relevant_chunk_ids": [
         "const_preamble_p32_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 40.16,
+        "stage2_rerank_ms": 0.19,
+        "total_ms": 40.35
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_preamble_p32_c01",
@@ -382,9 +493,96 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_preamble_p32_c01",
+        "stage2_top_chunk": "const_preamble_p32_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 2,
+        "demotions_count": 3,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_preamble_p32_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_5_p35_c02",
+            "initial_rank": 2,
+            "reranked_rank": 2,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_5_p35_c01",
+            "initial_rank": 3,
+            "reranked_rank": 3,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_4_p258_c01",
+            "initial_rank": 8,
+            "reranked_rank": 4,
+            "rank_shift": 4,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_243q_p158_c01",
+            "initial_rank": 6,
+            "reranked_rank": 5,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_168_p106_c01",
+            "initial_rank": 4,
+            "reranked_rank": 6,
+            "rank_shift": -2,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_216_p130_c01",
+            "initial_rank": 5,
+            "reranked_rank": 7,
+            "rank_shift": -2,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_243s_p160_c01",
+            "initial_rank": 7,
+            "reranked_rank": 8,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_79_p67_c01",
+            "initial_rank": 9,
+            "reranked_rank": 9,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_243b_p150_c01",
+            "initial_rank": 10,
+            "reranked_rank": 10,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -399,6 +597,11 @@
         "const_14_p37_c01",
         "const_15_p342_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 29.23,
+        "stage2_rerank_ms": 0.18,
+        "total_ms": 29.41
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_77_p66_c01",
@@ -468,9 +671,96 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_77_p66_c01",
+        "stage2_top_chunk": "const_77_p66_c01",
         "mrr_delta": -0.0111,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 2,
+        "demotions_count": 2,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_77_p66_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_166_p105_c01",
+            "initial_rank": 2,
+            "reranked_rank": 2,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_292_p198_c01",
+            "initial_rank": 3,
+            "reranked_rank": 3,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_77_p66_c02",
+            "initial_rank": 4,
+            "reranked_rank": 4,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_166_p105_c02",
+            "initial_rank": 5,
+            "reranked_rank": 5,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_19_p40_c01",
+            "initial_rank": 8,
+            "reranked_rank": 6,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_22_p42_c01",
+            "initial_rank": 7,
+            "reranked_rank": 7,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_370_p35_c01",
+            "initial_rank": 10,
+            "reranked_rank": 8,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_20_p42_c01",
+            "initial_rank": 6,
+            "reranked_rank": 9,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_15_p342_c01",
+            "initial_rank": 9,
+            "reranked_rank": 10,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 2
+          }
+        ]
       }
     },
     {
@@ -483,6 +773,11 @@
       "relevant_chunk_ids": [
         "const_21_p42_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 30.79,
+        "stage2_rerank_ms": 0.21,
+        "total_ms": 31.0
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_21_p42_c01",
@@ -552,9 +847,96 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_21_p42_c01",
+        "stage2_top_chunk": "const_21_p42_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 3,
+        "demotions_count": 2,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_21_p42_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_119_p334_c02",
+            "initial_rank": 4,
+            "reranked_rank": 2,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_119_p334_c01",
+            "initial_rank": 5,
+            "reranked_rank": 3,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_265_p183_c01",
+            "initial_rank": 3,
+            "reranked_rank": 4,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_265_p183_c02",
+            "initial_rank": 6,
+            "reranked_rank": 5,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_141_p96_c01",
+            "initial_rank": 2,
+            "reranked_rank": 6,
+            "rank_shift": -4,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_39_p52_c01",
+            "initial_rank": 7,
+            "reranked_rank": 7,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_11_p36_c01",
+            "initial_rank": 8,
+            "reranked_rank": 8,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_14_p37_c01",
+            "initial_rank": 9,
+            "reranked_rank": 9,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 1
+          },
+          {
+            "chunk_id": "const_34_p343_c01",
+            "initial_rank": 10,
+            "reranked_rank": 10,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -567,6 +949,11 @@
       "relevant_chunk_ids": [
         "const_32_p50_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 31.96,
+        "stage2_rerank_ms": 0.21,
+        "total_ms": 32.17
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_32_p50_c01",
@@ -636,9 +1023,96 @@
       },
       "comparison": {
         "status": "regressed",
+        "top1_changed": true,
+        "stage1_top_chunk": "const_32_p50_c01",
+        "stage2_top_chunk": "const_124_p88_c04",
         "mrr_delta": -0.6667,
         "ndcg5_delta": -0.5741,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 5,
+        "demotions_count": 5,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_124_p88_c04",
+            "initial_rank": 5,
+            "reranked_rank": 1,
+            "rank_shift": 4,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_124_p88_c01",
+            "initial_rank": 7,
+            "reranked_rank": 2,
+            "rank_shift": 5,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_32_p50_c01",
+            "initial_rank": 1,
+            "reranked_rank": 3,
+            "rank_shift": -2,
+            "direction": "demoted",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_124_p88_c02",
+            "initial_rank": 3,
+            "reranked_rank": 4,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_124_p88_c03",
+            "initial_rank": 4,
+            "reranked_rank": 5,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_143_p96_c01",
+            "initial_rank": 8,
+            "reranked_rank": 6,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_146_p98_c01",
+            "initial_rank": 9,
+            "reranked_rank": 7,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_138_p95_c01",
+            "initial_rank": 10,
+            "reranked_rank": 8,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_129_p92_c01",
+            "initial_rank": 6,
+            "reranked_rank": 9,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_32_p50_c02",
+            "initial_rank": 2,
+            "reranked_rank": 10,
+            "rank_shift": -8,
+            "direction": "demoted",
+            "relevance_grade": 2
+          }
+        ]
       }
     },
     {
@@ -651,6 +1125,11 @@
       "relevant_chunk_ids": [
         "const_17_p40_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 34.45,
+        "stage2_rerank_ms": 0.18,
+        "total_ms": 34.63
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_265_p183_c01",
@@ -720,9 +1199,96 @@
       },
       "comparison": {
         "status": "improved",
+        "top1_changed": true,
+        "stage1_top_chunk": "const_265_p183_c01",
+        "stage2_top_chunk": "const_119_p334_c02",
         "mrr_delta": 0.0889,
         "ndcg5_delta": 0.333,
-        "recall5_delta": 1.0
+        "recall5_delta": 1.0,
+        "promotions_count": 5,
+        "demotions_count": 3,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_119_p334_c02",
+            "initial_rank": 3,
+            "reranked_rank": 1,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_292_p198_c01",
+            "initial_rank": 7,
+            "reranked_rank": 2,
+            "rank_shift": 5,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_119_p334_c01",
+            "initial_rank": 4,
+            "reranked_rank": 3,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_11_p36_c01",
+            "initial_rank": 5,
+            "reranked_rank": 4,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_17_p40_c01",
+            "initial_rank": 9,
+            "reranked_rank": 5,
+            "rank_shift": 4,
+            "direction": "promoted",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_265_p183_c01",
+            "initial_rank": 1,
+            "reranked_rank": 6,
+            "rank_shift": -5,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_265_p183_c02",
+            "initial_rank": 6,
+            "reranked_rank": 7,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_34_p343_c01",
+            "initial_rank": 8,
+            "reranked_rank": 8,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_141_p96_c01",
+            "initial_rank": 2,
+            "reranked_rank": 9,
+            "rank_shift": -7,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_293_p198_c01",
+            "initial_rank": 10,
+            "reranked_rank": 10,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -735,6 +1301,11 @@
       "relevant_chunk_ids": [
         "const_24_p45_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 33.67,
+        "stage2_rerank_ms": 0.2,
+        "total_ms": 33.87
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_24_p45_c01",
@@ -804,9 +1375,96 @@
       },
       "comparison": {
         "status": "regressed",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_24_p45_c01",
+        "stage2_top_chunk": "const_24_p45_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": -0.0776,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 4,
+        "demotions_count": 5,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_24_p45_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_210_p127_c01",
+            "initial_rank": 7,
+            "reranked_rank": 2,
+            "rank_shift": 5,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_39_p52_c01",
+            "initial_rank": 8,
+            "reranked_rank": 3,
+            "rank_shift": 5,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_124_p88_c03",
+            "initial_rank": 3,
+            "reranked_rank": 4,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_124_p88_c01",
+            "initial_rank": 4,
+            "reranked_rank": 5,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_120_p87_c01",
+            "initial_rank": 9,
+            "reranked_rank": 6,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_124_p88_c04",
+            "initial_rank": 5,
+            "reranked_rank": 7,
+            "rank_shift": -2,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_124_p88_c02",
+            "initial_rank": 6,
+            "reranked_rank": 8,
+            "rank_shift": -2,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_265_p183_c01",
+            "initial_rank": 10,
+            "reranked_rank": 9,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_21a_p42_c01",
+            "initial_rank": 2,
+            "reranked_rank": 10,
+            "rank_shift": -8,
+            "direction": "demoted",
+            "relevance_grade": 1
+          }
+        ]
       }
     },
     {
@@ -819,6 +1477,11 @@
       "relevant_chunk_ids": [
         "const_20_p42_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 31.2,
+        "stage2_rerank_ms": 0.16,
+        "total_ms": 31.36
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_20_p42_c01",
@@ -888,9 +1551,96 @@
       },
       "comparison": {
         "status": "regressed",
+        "top1_changed": true,
+        "stage1_top_chunk": "const_20_p42_c01",
+        "stage2_top_chunk": "const_22_p42_c01",
         "mrr_delta": -0.5,
         "ndcg5_delta": -0.2723,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 4,
+        "demotions_count": 4,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_22_p42_c01",
+            "initial_rank": 2,
+            "reranked_rank": 1,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 1
+          },
+          {
+            "chunk_id": "const_20_p42_c01",
+            "initial_rank": 1,
+            "reranked_rank": 2,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_361_p250_c01",
+            "initial_rank": 3,
+            "reranked_rank": 3,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_361_p250_c02",
+            "initial_rank": 4,
+            "reranked_rank": 4,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_19_p40_c01",
+            "initial_rank": 10,
+            "reranked_rank": 5,
+            "rank_shift": 5,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_361_p250_c03",
+            "initial_rank": 7,
+            "reranked_rank": 6,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_49_p351_c01",
+            "initial_rank": 8,
+            "reranked_rank": 7,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_29_p46_c01",
+            "initial_rank": 5,
+            "reranked_rank": 8,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_29_p46_c02",
+            "initial_rank": 6,
+            "reranked_rank": 9,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_17_p40_c01",
+            "initial_rank": 9,
+            "reranked_rank": 10,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -903,6 +1653,11 @@
       "relevant_chunk_ids": [
         "const_21a_p42_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.06,
+        "total_ms": 0.07
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_6_p309_c01",
@@ -944,9 +1699,40 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_6_p309_c01",
+        "stage2_top_chunk": "const_6_p309_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_6_p309_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_6_p309_c02",
+            "initial_rank": 2,
+            "reranked_rank": 2,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_6_p309_c03",
+            "initial_rank": 3,
+            "reranked_rank": 3,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -959,6 +1745,11 @@
       "relevant_chunk_ids": [
         "const_25_p349_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 31.0,
+        "stage2_rerank_ms": 0.17,
+        "total_ms": 31.17
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_25_p349_c01",
@@ -1028,9 +1819,96 @@
       },
       "comparison": {
         "status": "regressed",
+        "top1_changed": true,
+        "stage1_top_chunk": "const_25_p349_c01",
+        "stage2_top_chunk": "const_19_p40_c01",
         "mrr_delta": -0.75,
         "ndcg5_delta": -0.5223,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 5,
+        "demotions_count": 3,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_19_p40_c01",
+            "initial_rank": 4,
+            "reranked_rank": 1,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_11_p36_c01",
+            "initial_rank": 6,
+            "reranked_rank": 2,
+            "rank_shift": 4,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_86_p71_c01",
+            "initial_rank": 7,
+            "reranked_rank": 3,
+            "rank_shift": 4,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_25_p349_c01",
+            "initial_rank": 1,
+            "reranked_rank": 4,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_301_p202_c01",
+            "initial_rank": 5,
+            "reranked_rank": 5,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_301_p202_c02",
+            "initial_rank": 8,
+            "reranked_rank": 6,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_26_p45_c01",
+            "initial_rank": 2,
+            "reranked_rank": 7,
+            "rank_shift": -5,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_26_p45_c02",
+            "initial_rank": 9,
+            "reranked_rank": 8,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_15_p342_c01",
+            "initial_rank": 3,
+            "reranked_rank": 9,
+            "rank_shift": -6,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_28_p350_c01",
+            "initial_rank": 10,
+            "reranked_rank": 10,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -1043,6 +1921,11 @@
       "relevant_chunk_ids": [
         "const_50_p55_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 30.3,
+        "stage2_rerank_ms": 0.18,
+        "total_ms": 30.48
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_50_p55_c01",
@@ -1112,9 +1995,96 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_50_p55_c01",
+        "stage2_top_chunk": "const_50_p55_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 3,
+        "demotions_count": 6,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_50_p55_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_53_p57_c01",
+            "initial_rank": 9,
+            "reranked_rank": 2,
+            "rank_shift": 7,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_73_p64_c01",
+            "initial_rank": 5,
+            "reranked_rank": 3,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_154_p101_c01",
+            "initial_rank": 10,
+            "reranked_rank": 4,
+            "rank_shift": 6,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_315_p208_c01",
+            "initial_rank": 2,
+            "reranked_rank": 5,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_320_p211_c01",
+            "initial_rank": 4,
+            "reranked_rank": 6,
+            "rank_shift": -2,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_162_p103_c01",
+            "initial_rank": 6,
+            "reranked_rank": 7,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_321_p213_c01",
+            "initial_rank": 7,
+            "reranked_rank": 8,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_244_p174_c01",
+            "initial_rank": 8,
+            "reranked_rank": 9,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_378_p281_c01",
+            "initial_rank": 3,
+            "reranked_rank": 10,
+            "rank_shift": -7,
+            "direction": "demoted",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -1127,6 +2097,11 @@
       "relevant_chunk_ids": [
         "const_72_p362_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 32.05,
+        "stage2_rerank_ms": 0.18,
+        "total_ms": 32.23
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_52_p57_c01",
@@ -1196,9 +2171,96 @@
       },
       "comparison": {
         "status": "regressed",
+        "top1_changed": true,
+        "stage1_top_chunk": "const_52_p57_c01",
+        "stage2_top_chunk": "const_392_p282_c01",
         "mrr_delta": -0.375,
         "ndcg5_delta": -0.5788,
-        "recall5_delta": -1.0
+        "recall5_delta": -1.0,
+        "promotions_count": 6,
+        "demotions_count": 4,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_392_p282_c01",
+            "initial_rank": 4,
+            "reranked_rank": 1,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_143_p96_c01",
+            "initial_rank": 5,
+            "reranked_rank": 2,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_372a_p278_c01",
+            "initial_rank": 6,
+            "reranked_rank": 3,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_52_p57_c01",
+            "initial_rank": 1,
+            "reranked_rank": 4,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_63_p60_c01",
+            "initial_rank": 7,
+            "reranked_rank": 5,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_63_p60_c02",
+            "initial_rank": 9,
+            "reranked_rank": 6,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_70_p63_c02",
+            "initial_rank": 10,
+            "reranked_rank": 7,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_72_p362_c01",
+            "initial_rank": 2,
+            "reranked_rank": 8,
+            "rank_shift": -6,
+            "direction": "demoted",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_161_p367_c01",
+            "initial_rank": 3,
+            "reranked_rank": 9,
+            "rank_shift": -6,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_123_p365_c01",
+            "initial_rank": 8,
+            "reranked_rank": 10,
+            "rank_shift": -2,
+            "direction": "demoted",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -1215,6 +2277,11 @@
         "const_19_p40_c01",
         "const_21_p42_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 35.24,
+        "stage2_rerank_ms": 0.21,
+        "total_ms": 35.45
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_8_p341_c01",
@@ -1284,9 +2351,96 @@
       },
       "comparison": {
         "status": "improved",
+        "top1_changed": true,
+        "stage1_top_chunk": "const_8_p341_c01",
+        "stage2_top_chunk": "const_32_p50_c02",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0326,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 5,
+        "demotions_count": 4,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_32_p50_c02",
+            "initial_rank": 2,
+            "reranked_rank": 1,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_5_p35_c02",
+            "initial_rank": 3,
+            "reranked_rank": 2,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_32_p50_c01",
+            "initial_rank": 6,
+            "reranked_rank": 3,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 1
+          },
+          {
+            "chunk_id": "const_168_p106_c01",
+            "initial_rank": 7,
+            "reranked_rank": 4,
+            "rank_shift": 3,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_5_p35_c01",
+            "initial_rank": 9,
+            "reranked_rank": 5,
+            "rank_shift": 4,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_8_p341_c01",
+            "initial_rank": 1,
+            "reranked_rank": 6,
+            "rank_shift": -5,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_7_p35_c01",
+            "initial_rank": 4,
+            "reranked_rank": 7,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_88_p71_c01",
+            "initial_rank": 5,
+            "reranked_rank": 8,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_6_p309_c02",
+            "initial_rank": 8,
+            "reranked_rank": 9,
+            "rank_shift": -1,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_216_p130_c01",
+            "initial_rank": 10,
+            "reranked_rank": 10,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -1301,6 +2455,11 @@
         "const_14_p37_c01",
         "const_15_p342_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.0,
+        "total_ms": 0.01
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_14_p37_c01"
@@ -1334,9 +2493,24 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_14_p37_c01",
+        "stage2_top_chunk": "const_14_p37_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_14_p37_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          }
+        ]
       }
     },
     {
@@ -1351,6 +2525,11 @@
         "const_352_p239_c01",
         "const_356_p35_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.04,
+        "total_ms": 0.05
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_352_p239_c01",
@@ -1388,9 +2567,32 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_352_p239_c01",
+        "stage2_top_chunk": "const_352_p239_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_352_p239_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_352_p239_c02",
+            "initial_rank": 2,
+            "reranked_rank": 2,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 2
+          }
+        ]
       }
     },
     {
@@ -1405,6 +2607,11 @@
         "const_23_p45_c01",
         "const_24_p45_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 32.59,
+        "stage2_rerank_ms": 0.24,
+        "total_ms": 32.83
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_16_p39_c01",
@@ -1474,9 +2681,96 @@
       },
       "comparison": {
         "status": "improved",
+        "top1_changed": true,
+        "stage1_top_chunk": "const_16_p39_c01",
+        "stage2_top_chunk": "const_23_p45_c01",
         "mrr_delta": 0.5,
         "ndcg5_delta": 0.2937,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 4,
+        "demotions_count": 2,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_23_p45_c01",
+            "initial_rank": 3,
+            "reranked_rank": 1,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_24_p45_c01",
+            "initial_rank": 2,
+            "reranked_rank": 2,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_107_p79_c01",
+            "initial_rank": 4,
+            "reranked_rank": 3,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_196_p119_c01",
+            "initial_rank": 6,
+            "reranked_rank": 4,
+            "rank_shift": 2,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_16_p39_c01",
+            "initial_rank": 1,
+            "reranked_rank": 5,
+            "rank_shift": -4,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_371j_p276_c01",
+            "initial_rank": 7,
+            "reranked_rank": 6,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_378_p281_c02",
+            "initial_rank": 5,
+            "reranked_rank": 7,
+            "rank_shift": -2,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_164_p103_c01",
+            "initial_rank": 8,
+            "reranked_rank": 8,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_313_p208_c01",
+            "initial_rank": 9,
+            "reranked_rank": 9,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_358_p246_c01",
+            "initial_rank": 10,
+            "reranked_rank": 10,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -1489,6 +2783,11 @@
       "relevant_chunk_ids": [
         "const_368_p35_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.0,
+        "total_ms": 0.01
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_368_p35_c01"
@@ -1522,9 +2821,24 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_368_p35_c01",
+        "stage2_top_chunk": "const_368_p35_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_368_p35_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          }
+        ]
       }
     },
     {
@@ -1537,6 +2851,11 @@
       "relevant_chunk_ids": [
         "const_32_p50_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.05,
+        "total_ms": 0.06
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_32_p50_c01",
@@ -1574,9 +2893,32 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_32_p50_c01",
+        "stage2_top_chunk": "const_32_p50_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_32_p50_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_32_p50_c02",
+            "initial_rank": 2,
+            "reranked_rank": 2,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 2
+          }
+        ]
       }
     },
     {
@@ -1589,6 +2931,11 @@
       "relevant_chunk_ids": [
         "const_19_p40_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.0,
+        "total_ms": 0.01
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_19_p40_c01"
@@ -1622,9 +2969,24 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_19_p40_c01",
+        "stage2_top_chunk": "const_19_p40_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_19_p40_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          }
+        ]
       }
     },
     {
@@ -1639,6 +3001,11 @@
         "const_356_p35_c01",
         "const_21_p42_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.0,
+        "total_ms": 0.01
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_356_p35_c01"
@@ -1672,9 +3039,24 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_356_p35_c01",
+        "stage2_top_chunk": "const_356_p35_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_356_p35_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          }
+        ]
       }
     },
     {
@@ -1687,6 +3069,11 @@
       "relevant_chunk_ids": [
         "const_44_p54_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 35.01,
+        "stage2_rerank_ms": 0.2,
+        "total_ms": 35.21
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_44_p54_c01",
@@ -1756,9 +3143,96 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_44_p54_c01",
+        "stage2_top_chunk": "const_44_p54_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 3,
+        "demotions_count": 1,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_44_p54_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          },
+          {
+            "chunk_id": "const_351_p238_c01",
+            "initial_rank": 2,
+            "reranked_rank": 2,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_312_p206_c02",
+            "initial_rank": 4,
+            "reranked_rank": 3,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_312_p206_c01",
+            "initial_rank": 5,
+            "reranked_rank": 4,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_76_p66_c01",
+            "initial_rank": 6,
+            "reranked_rank": 5,
+            "rank_shift": 1,
+            "direction": "promoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_31c_p49_c01",
+            "initial_rank": 3,
+            "reranked_rank": 6,
+            "rank_shift": -3,
+            "direction": "demoted",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_77_p66_c01",
+            "initial_rank": 7,
+            "reranked_rank": 7,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_148_p99_c01",
+            "initial_rank": 8,
+            "reranked_rank": 8,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_377_p280_c01",
+            "initial_rank": 9,
+            "reranked_rank": 9,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          },
+          {
+            "chunk_id": "const_63_p60_c01",
+            "initial_rank": 10,
+            "reranked_rank": 10,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 0
+          }
+        ]
       }
     },
     {
@@ -1771,6 +3245,11 @@
       "relevant_chunk_ids": [
         "const_1_p33_c01"
       ],
+      "execution_time_ms": {
+        "stage1_normal_ms": 0.01,
+        "stage2_rerank_ms": 0.0,
+        "total_ms": 0.01
+      },
       "stage1": {
         "retrieved_chunk_ids": [
           "const_1_p33_c01"
@@ -1804,9 +3283,24 @@
       },
       "comparison": {
         "status": "unchanged",
+        "top1_changed": false,
+        "stage1_top_chunk": "const_1_p33_c01",
+        "stage2_top_chunk": "const_1_p33_c01",
         "mrr_delta": 0.0,
         "ndcg5_delta": 0.0,
-        "recall5_delta": 0.0
+        "recall5_delta": 0.0,
+        "promotions_count": 0,
+        "demotions_count": 0,
+        "chunk_movements": [
+          {
+            "chunk_id": "const_1_p33_c01",
+            "initial_rank": 1,
+            "reranked_rank": 1,
+            "rank_shift": 0,
+            "direction": "unchanged",
+            "relevance_grade": 3
+          }
+        ]
       }
     }
   ]
