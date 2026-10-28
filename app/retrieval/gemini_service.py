@@ -118,6 +118,26 @@ def format_retrieved_evidence(
     return "No specific constitutional articles matched in local PDF."
 
 
+def clean_gemini_response(text: str) -> str:
+    """Strip repetitive meta-commentary, introductory filler, and robotic persona throat-clearing."""
+    if not text:
+        return text
+
+    lines = text.strip().splitlines()
+    pattern = r"^(?:as an? (?:expert|constitutional|legal|assistant|scholar|ai).*?|based on the (?:official|provided|extracted|context).*?|here is (?:a|an|the).*?|certainly[,!.]?|sure[,!.]?|in this response|allow me to).*$"
+    while lines:
+        first_line = lines[0].strip()
+        if re.match(pattern, first_line, re.IGNORECASE):
+            lines.pop(0)
+            while lines and not lines[0].strip():
+                lines.pop(0)
+        else:
+            break
+
+    cleaned = "\n".join(lines).strip()
+    return cleaned or text
+
+
 def generate_gemini_constitutional_response(
     question: str,
     retrieved_docs: List[Dict[str, Any]],
@@ -159,13 +179,16 @@ def generate_gemini_constitutional_response(
             )
 
     system_instruction = (
-        "You are an expert constitutional scholar and legal assistant specializing in the Constitution of India. "
+        "You are an expert constitutional legal assistant specializing in the Constitution of India. "
         "Your task is to provide clear, articulate, authoritative, and helpful answers to the user's questions. "
         "Always ground your reasoning in the provided verbatim evidence extracted from the official Constitution of India PDF. "
         "Maintain continuity with prior conversation history, resolving pronouns (such as 'it', 'the earlier article', "
         "'give an example', 'explain it simply') based on what was previously discussed in the chat thread. "
         "If Mem0 user context is provided, adapt tone and emphasize relevant constitutional aspects accordingly. "
-        "Structure your response with clear headings, bullet points, and plain-English explanations."
+        "Structure your response with clear headings, bullet points, and plain-English explanations.\n"
+        "STRICT STYLE RULE: DO NOT use conversational throat-clearing, meta-announcements, or persona declarations. "
+        "NEVER begin your answer with 'As an expert...', 'As a constitutional scholar...', 'Based on the official text...', "
+        "'Here is a breakdown...', or similar phrases. Jump directly into the substantive legal analysis and headings."
     )
 
     prompt = (
@@ -177,7 +200,7 @@ def generate_gemini_constitutional_response(
         f"{mem_section}"
         f"=== LATEST USER QUESTION ===\n"
         f"{question}\n\n"
-        f"Provide your comprehensive, accessible response based on the above evidence and context."
+        f"Provide your comprehensive, accessible response based on the above evidence and context. Jump directly into the answer without introductory phrases."
     )
 
     # 1. Primary: Direct REST call with fast timeout and persistent HTTP connection
@@ -188,7 +211,7 @@ def generate_gemini_constitutional_response(
             resp = session.post(
                 url,
                 json={"contents": [{"parts": [{"text": prompt}]}]},
-                timeout=10,
+                timeout=25,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -196,7 +219,8 @@ def generate_gemini_constitutional_response(
                 if candidates:
                     parts = candidates[0].get("content", {}).get("parts", [])
                     if parts and "text" in parts[0]:
-                        return parts[0]["text"].strip()
+                        raw_ans = parts[0]["text"].strip()
+                        return clean_gemini_response(raw_ans)
             else:
                 logger.warning("REST model %s returned status %d: %s", model_name, resp.status_code, resp.text[:120])
         except Exception as req_err:
@@ -214,7 +238,7 @@ def generate_gemini_constitutional_response(
                     contents=prompt,
                 )
                 if response and response.text:
-                    return response.text.strip()
+                    return clean_gemini_response(response.text.strip())
             except Exception as model_err:
                 logger.warning("google-genai model %s failed: %s", model_name, model_err)
     except Exception as lib_err:
