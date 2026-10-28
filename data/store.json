@@ -1,0 +1,35 @@
+{
+  "bookmarks": {
+    "lawyer_kumar@delhi_bar_in": {},
+    "snehithyerra13@gmail_com": {}
+  },
+  "profile": {
+    "lawyer_kumar@delhi_bar_in": {
+      "preferences": {
+        "tone": "Plain English"
+      }
+    },
+    "snehithyerra13@gmail_com": {
+      "preferences": {
+        "tone": "Academic"
+      }
+    },
+    "user_default": {
+      "preferences": {
+        "tone": "Concise",
+        "detail_level": "High"
+      }
+    },
+    "user_test_lawyer_1": {
+      "preferences": {
+        "tone": "Academic"
+      }
+    },
+    "user_test_lawyer_2": {
+      "preferences": {
+        "tone": "Plain English"
+      }
+    }
+  },
+  "topics": {}
+}

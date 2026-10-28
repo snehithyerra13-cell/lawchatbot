@@ -1,0 +1,34 @@
+# Environment variables (Credentials)
+.env
+*.env
+.env.local
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Testing & Caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Databases & Runtime State (Keep user history & large checkpoints out of git)
+data/*.db
+data/*.db-*
+data/*.db-shm
+data/*.db-wal

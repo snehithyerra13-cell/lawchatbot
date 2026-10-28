@@ -1,0 +1,22 @@
+# Core UI & Graph Framework
+streamlit>=1.35.0
+langgraph>=0.2.0
+langchain-core>=0.2.0
+langgraph-checkpoint>=2.0.0
+langgraph-checkpoint-sqlite>=2.0.0
+
+# Document Ingestion
+pypdf>=4.0.0
+
+# Gemini AI Integration
+google-genai>=2.0.0
+requests>=2.28.0
+
+# Memory & Auth
+mem0ai>=2.0.0
+pyjwt>=2.8.0
+cryptography>=41.0.0
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=8.0.0
