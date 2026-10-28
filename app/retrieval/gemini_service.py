@@ -124,18 +124,32 @@ def clean_gemini_response(text: str) -> str:
         return text
 
     lines = text.strip().splitlines()
-    pattern = r"^(?:as an? (?:expert|constitutional|legal|assistant|scholar|ai).*?|based on the (?:official|provided|extracted|context).*?|here is (?:a|an|the).*?|certainly[,!.]?|sure[,!.]?|in this response|allow me to).*$"
-    while lines:
-        first_line = lines[0].strip()
-        if re.match(pattern, first_line, re.IGNORECASE):
-            lines.pop(0)
-            while lines and not lines[0].strip():
-                lines.pop(0)
-        else:
-            break
+    pattern = (
+        r"^[\s\*\#\-\>]*(?:"
+        r"as an? (?:expert|constitutional|legal|assistant|scholar|ai|specialist)|"
+        r"based on (?:the|our|your)? (?:official|provided|extracted|context|previous|prior)|"
+        r"here is (?:a|an|the)|"
+        r"certainly[,!.]?|sure[,!.]?|in this response|allow me to|with regards? to|"
+        r"welcome to|in the context of your previous|"
+        r"building upon our previous discussion"
+        r").*$"
+    )
+    # Check top lines and remove any matching introductory meta-phrases
+    cleaned_lines = []
+    checking = True
+    removed_count = 0
+    for line in lines:
+        stripped = line.strip()
+        if checking and removed_count < 6:
+            if not stripped or re.match(pattern, stripped, re.IGNORECASE):
+                removed_count += 1
+                continue
+            else:
+                checking = False
+        cleaned_lines.append(line)
 
-    cleaned = "\n".join(lines).strip()
-    return cleaned or text
+    result = "\n".join(cleaned_lines).strip()
+    return result or text
 
 
 def generate_gemini_constitutional_response(
@@ -181,14 +195,14 @@ def generate_gemini_constitutional_response(
     system_instruction = (
         "You are an expert constitutional legal assistant specializing in the Constitution of India. "
         "Your task is to provide clear, articulate, authoritative, and helpful answers to the user's questions. "
-        "Always ground your reasoning in the provided verbatim evidence extracted from the official Constitution of India PDF. "
-        "Maintain continuity with prior conversation history, resolving pronouns (such as 'it', 'the earlier article', "
-        "'give an example', 'explain it simply') based on what was previously discussed in the chat thread. "
+        "Always ground your reasoning directly in the provided verbatim evidence extracted from the official Constitution of India PDF. "
+        "Maintain continuity with prior conversation history without explicitly mentioning previous research, sessions, or past articles unless the user directly asks for a comparison. "
         "If Mem0 user context is provided, adapt tone and emphasize relevant constitutional aspects accordingly. "
         "Structure your response with clear headings, bullet points, and plain-English explanations.\n"
         "STRICT STYLE RULE: DO NOT use conversational throat-clearing, meta-announcements, or persona declarations. "
         "NEVER begin your answer with 'As an expert...', 'As a constitutional scholar...', 'Based on the official text...', "
-        "'Here is a breakdown...', or similar phrases. Jump directly into the substantive legal analysis and headings."
+        "'Based on the context of your previous research...', 'Here is a breakdown...', or similar phrases. "
+        "DO NOT reference prior conversation history unless the user explicitly requested a comparison or follow-up. Jump directly into the substantive legal analysis and headings."
     )
 
     prompt = (

@@ -220,46 +220,55 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
     }
 
 
-def render_source_sidebar_card(info: Dict[str, Any]) -> None:
-    """Render a dedicated, prominent Source Provenance Card directly beside the response text."""
+def render_message_provenance_bar(info: Dict[str, Any]) -> None:
+    """Render a clean, non-intrusive provenance line and verified legal citations."""
     if not info:
         return
 
-    time_badge = (
-        f"""<div style="margin-top: 6px;"><span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; background-color: #f1f8e9; color: #2e7d32; border: 1px solid #c8e6c9;">⏱️ {info['exec_time']:.2f}s</span></div>"""
-        if info.get("exec_time") is not None
-        else ""
-    )
+    art_label = f"Article {info['article_number']}" if info.get('article_number') else "Constitutional Analysis"
+    page_str = info.get("page_str", "Official Gazette")
+    part_str = info.get("part", "Part III")
+    doc_str = info.get("source_pdf", "constitution.pdf")
 
-    if info.get("response_type") == "out_of_scope" or info.get("intent") == "out_of_scope":
-        out_time_badge = (
-            f"""<div style="margin-top: 6px;"><span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;">⏱️ {info['exec_time']:.2f}s</span></div>"""
-            if info.get("exec_time") is not None
-            else ""
-        )
-        card_html = f"""<div style="background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a; border-left: 4px solid #d97706; border-radius: 10px; padding: 12px 14px; margin-top: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);"><div style="font-weight: 700; color: #92400e; font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #fcd34d; padding-bottom: 5px;"><span style="display: flex; align-items: center; gap: 5px;">⚖️ Domain Scope</span><span style="font-size: 0.70rem; color: #92400e; background: #fed7aa; padding: 1px 6px; border-radius: 8px; font-weight: 700;">RESTRICTED</span></div><div style="font-size: 0.80rem; color: #78350f; line-height: 1.55;"><div style="margin-bottom: 3px;"><strong>🎯 Focus:</strong> Constitution of India</div><div style="margin-bottom: 3px;"><strong>🚫 Scope:</strong> Non-constitutional query</div><div style="margin-bottom: 3px;"><strong>📄 PDF:</strong> <code>constitution.pdf</code></div>{out_time_badge}</div></div>"""
-        st.markdown(card_html, unsafe_allow_html=True)
-        return
+    time_badge = ""
+    if info.get("exec_time") is not None:
+        time_badge = f"""<span style="font-size: 0.74rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">⏱️ {info['exec_time']:.2f}s</span>"""
 
-    art_label = f"Article {info['article_number']}" if info['article_number'] else "Constitutional Subject"
-
-    rerank_html = ""
+    rerank_badge = ""
     if info.get("rerank_score") is not None:
-        rerank_html = f"""<div style="margin-bottom: 3px;"><strong>🔄 RAG Rerank:</strong> <span style="color: #6b21a8; background: #f3e8ff; padding: 1px 6px; border-radius: 6px; font-weight: 700; font-size: 0.76rem;">Score {info['rerank_score']}/100</span></div>"""
+        rerank_badge = f"""<span style="font-size: 0.72rem; color: #6b21a8; background: #f3e8ff; padding: 2px 7px; border-radius: 6px; font-weight: 600; border: 1px solid #e9d5ff;">🔄 Rerank: {info['rerank_score']}/100</span>"""
     elif info.get("rerank_metadata") and info["rerank_metadata"].get("method") == "none":
-        rerank_html = """<div style="margin-bottom: 3px;"><strong>⚡ RAG Retrieval:</strong> <span style="color: #0369a1; background: #e0f2fe; padding: 1px 6px; border-radius: 6px; font-weight: 700; font-size: 0.76rem;">Direct (No Rerank)</span></div>"""
+        rerank_badge = """<span style="font-size: 0.72rem; color: #0369a1; background: #e0f2fe; padding: 2px 7px; border-radius: 6px; font-weight: 600; border: 1px solid #bae6fd;">⚡ Direct RAG</span>"""
 
-    card_html = f"""<div style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #cbd5e1; border-left: 4px solid #1a73e8; border-radius: 10px; padding: 12px 14px; margin-top: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);"><div style="font-weight: 700; color: #0f172a; font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;"><span style="display: flex; align-items: center; gap: 5px;">📚 Source Provenance</span><span style="font-size: 0.70rem; color: #16a34a; background: #dcfce7; padding: 1px 6px; border-radius: 8px; font-weight: 700;">VERIFIED</span></div><div style="font-size: 0.80rem; color: #334155; line-height: 1.55;"><div style="margin-bottom: 3px;"><strong>📄 Document:</strong> <code>{info['source_pdf']}</code></div><div style="margin-bottom: 3px;"><strong>📖 Citation:</strong> <strong style="color: #1a73e8; background: #e0f2fe; padding: 1px 6px; border-radius: 6px;">{info['page_str']}</strong></div><div style="margin-bottom: 3px;"><strong>🏛️ Part:</strong> {info['part']}</div><div style="margin-bottom: 3px;"><strong>📜 Provision:</strong> {art_label}</div>{rerank_html}{time_badge}</div></div>"""
-    st.markdown(card_html, unsafe_allow_html=True)
+    bar_html = f"""
+    <div style="margin-top: 10px; margin-bottom: 6px; padding: 6px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; color: #334155;">
+            <span style="font-weight: 600; color: #0f172a;">📄 {doc_str}</span>
+            <span style="color: #94a3b8;">&bull;</span>
+            <span style="color: #1a73e8; font-weight: 600;">{art_label}</span>
+            <span style="color: #64748b;">({part_str}, {page_str})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+            {rerank_badge}
+            {time_badge}
+        </div>
+    </div>
+    """
+    st.markdown(bar_html, unsafe_allow_html=True)
 
     if info.get("docs") and len(info["docs"]) > 1:
-        with st.expander(f"📚 All {len(info['docs'])} Citations", expanded=False):
+        with st.expander(f"📚 All {len(info['docs'])} Citations from Constitution PDF", expanded=False):
             for idx, d in enumerate(info["docs"]):
                 a_num = d.get("article_number", "")
                 p_s = d.get("page_start", "")
                 p_e = d.get("page_end", p_s)
                 pg = f"Page {p_s}" if p_s == p_e or not p_e else f"Pages {p_s}–{p_e}"
-                st.caption(f"**#{idx+1}: Article {a_num}** ({pg}, {d.get('part', 'Part III')})")
+                st.caption(f"**#{idx+1}: Article {a_num}** ({pg}, {d.get('part', 'Part III')}) — {d.get('article_title', '')}")
+
+
+def render_source_sidebar_card(info: Dict[str, Any]) -> None:
+    """Legacy alias redirecting to clean provenance bar."""
+    render_message_provenance_bar(info)
 
 
 def render_assistant_metadata_and_sources(msg_or_result: Any) -> None:
@@ -1263,29 +1272,126 @@ with st.sidebar:
 
 
 # ==========================================
-# MAIN INTERFACE
+# MAIN INTERFACE & POP-UP DIALOGS
 # ==========================================
+
+@st.dialog("🎯 Human-in-the-Loop: RAG Ranking Decision", width="large")
+def render_hitl_modal(paused_result: Dict[str, Any], active_thread: str, active_engine_mode: str) -> None:
+    """Pop-up modal dialog for Human-in-the-Loop decision on ranking & engine approval."""
+    raw_q = (
+        paused_result.get("raw_question")
+        or paused_result.get("prior_user_query")
+        or paused_result.get("question", "")
+    )
+    art_num = paused_result.get("article_number") or paused_result.get("last_discussed_article")
+    art_title = paused_result.get("last_discussed_title") or ""
+    docs = paused_result.get("retrieved_documents", [])
+    if not art_title and docs:
+        art_title = docs[0].get("article_title", "")
+    part_name = docs[0].get("part", "") if docs else ""
+    page_start = docs[0].get("page_start", "") if docs else ""
+    cand_list = paused_result.get("candidate_documents") or docs or []
+
+    st.markdown(f"**Question Asked:** *\"{raw_q}\"*")
+    if art_num:
+        st.markdown(
+            f"""<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px; margin: 8px 0;">
+                <div style="color: #166534; font-weight: 700; font-size: 0.88rem;">🏛️ Constitutional Provision Identified</div>
+                <div style="color: #15803d; font-size: 0.84rem;"><strong>Article {art_num}</strong> — <em>{art_title}</em> ({part_name}, Page {page_start})</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+    if len(cand_list) > 1:
+        cand_summary = ", ".join([f"Art. {c.get('article_number')}" for c in cand_list[:5]])
+        st.caption(f"📚 {len(cand_list)} candidate provisions found in Constitution database: {cand_summary}")
+
+    st.markdown("##### 🔍 Human Decision: RAG Second-Stage Ranking")
+    hitl_rerank_choice = st.radio(
+        "Select ranking strategy:",
+        [
+            "🔄 Apply Gemini Semantic Reranking (AI Cross-Scoring)",
+            "⚡ Direct Retrieval (Without Reranking)",
+        ],
+        index=0,
+        key="hitl_modal_rerank_radio",
+        help="Decide whether to score & reorder candidate articles using Gemini AI semantic ranking.",
+    )
+    selected_rerank_val = "rerank" if "Apply Gemini" in hitl_rerank_choice else "no_rerank"
+
+    st.markdown("##### 🚀 Choose Consultation Engine to Answer:")
+    col_d1, col_d2, col_d3, col_d4 = st.columns([1.1, 1.1, 1.1, 0.7])
+    with col_d1:
+        if st.button("✨ With Context (Gemini)", key="btn_hitl_gemini", use_container_width=True, type="primary"):
+            with st.spinner("Synthesizing answer with context..."):
+                resume_constitution_chat(
+                    active_thread,
+                    checkpointer=checkpointer,
+                    store=global_store,
+                    selected_engine="gemini",
+                    rerank_choice=selected_rerank_val,
+                )
+            st.session_state.pending_interrupt = None
+            st.session_state.just_streamed_thread = active_thread
+            st.session_state.just_streamed_choice = "gemini"
+            conv_db.update_conversation(active_thread, engine_mode="gemini")
+            st.toast("Answer generated with Gemini (With Context)!", icon="✨")
+            st.rerun()
+
+    with col_d2:
+        if st.button("📜 Without Context (PDF)", key="btn_hitl_rule", use_container_width=True):
+            with st.spinner("Retrieving verbatim PDF text..."):
+                resume_constitution_chat(
+                    active_thread,
+                    checkpointer=checkpointer,
+                    store=global_store,
+                    selected_engine="rule_based",
+                    rerank_choice=selected_rerank_val,
+                )
+            st.session_state.pending_interrupt = None
+            st.session_state.just_streamed_thread = active_thread
+            st.session_state.just_streamed_choice = "rule_based"
+            conv_db.update_conversation(active_thread, engine_mode="rule_based")
+            st.toast("Retrieved verbatim PDF (Without Context)!", icon="📜")
+            st.rerun()
+
+    with col_d3:
+        if st.button("⚖️ Dual View (Both)", key="btn_hitl_both", use_container_width=True):
+            with st.spinner("Synthesizing dual view..."):
+                resume_constitution_chat(
+                    active_thread,
+                    checkpointer=checkpointer,
+                    store=global_store,
+                    selected_engine="both",
+                    rerank_choice=selected_rerank_val,
+                )
+            st.session_state.pending_interrupt = None
+            st.session_state.just_streamed_thread = active_thread
+            st.session_state.just_streamed_choice = "both"
+            conv_db.update_conversation(active_thread, engine_mode="both")
+            st.toast("Dual view generated!", icon="⚖️")
+            st.rerun()
+
+    with col_d4:
+        if st.button("❌ Discard", key="btn_hitl_discard", use_container_width=True):
+            discard_thread_interrupted_turn(active_thread)
+            st.session_state.pending_interrupt = None
+            st.toast("Turn discarded.", icon="❌")
+            st.rerun()
+
+
+# Modern, clean minimalist header
 st.markdown(
     """
-    <div class="chat-header">
-        <h1 style="margin-bottom: 4px;">ConstitutionGPT</h1>
+    <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
         <div>
-            <div class="main-badge">🇮🇳 Constitution of India</div>
-            <div class="badge-dual">🏛️ PDF Rule Engine + ✨ Gemini AI</div>
-            <div class="badge-gemini">🔐 Auth0 Identity</div>
-            <div class="badge-gemini">🧠 Mem0 Memory</div>
-        </div>
-        <div style="margin-top: 6px;">
-            <div class="badge-pillar">💾 Persistence</div>
-            <div class="badge-pillar">📌 Checkpointers</div>
-            <div class="badge-pillar">🏪 Stores</div>
-            <div class="badge-pillar">🛡️ Fault tolerance</div>
-            <div class="badge-pillar">⚡ Event streaming</div>
-            <div class="badge-pillar">🌊 Streaming</div>
-            <div class="badge-pillar">⏸️ Interrupts</div>
-            <div class="badge-pillar">⏳ Time travel</div>
-            <div class="badge-pillar">🧠 Memory</div>
-            <div class="badge-pillar">🔀 Subgraphs</div>
+            <h2 style="margin: 0; font-size: 1.55rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                <span>⚖️ ConstitutionGPT</span>
+                <span style="font-size: 0.70rem; font-weight: 600; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">🇮🇳 Official Gazette Grounded</span>
+            </h2>
+            <div style="font-size: 0.80rem; color: #64748b; margin-top: 2px;">
+                Dual Engine: <strong>Verbatim PDF</strong> (Without Context) + <strong>Gemini AI</strong> (With Context) &bull; Auth0 &bull; Mem0
+            </div>
         </div>
     </div>
     """,
@@ -1311,8 +1417,8 @@ if not conv_info:
 thread_messages = get_thread_messages(active_thread, user_id=_active_uid())
 active_engine_mode = (conv_info.get("engine_mode") if conv_info else "both") or "both"
 
-# Interactive Engine Switcher for Active Chat
-col_mode_bar1, col_mode_bar2 = st.columns([0.40, 0.60])
+# Clean Interactive Engine Mode Switcher
+col_mode_bar1, col_mode_bar2 = st.columns([0.32, 0.68])
 with col_mode_bar1:
     st.markdown(
         """<div style="margin-top: 6px; font-weight: 700; color: #1e293b; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
@@ -1321,8 +1427,15 @@ with col_mode_bar1:
         unsafe_allow_html=True,
     )
 with col_mode_bar2:
-    mode_options = ["⚖️ Both Engines (Dual View)", "🏛️ Rule-Based Only", "✨ Gemini API Only"]
-    curr_mode_idx = 1 if active_engine_mode == "rule_based" else (2 if active_engine_mode == "gemini" else 0)
+    mode_options = [
+        "⚖️ Dual View (Both Side-by-Side)",
+        "✨ With Context (Gemini AI)",
+        "📜 Without Context (PDF Verbatim)",
+    ]
+    curr_mode_idx = (
+        1 if active_engine_mode == "gemini"
+        else (2 if active_engine_mode == "rule_based" else 0)
+    )
     selected_mode_label = st.radio(
         "Active Consultation Engine:",
         mode_options,
@@ -1331,12 +1444,23 @@ with col_mode_bar2:
         label_visibility="collapsed",
         key=f"engine_mode_radio_{active_thread}",
     )
-    mapped_mode = "rule_based" if "Rule-Based" in selected_mode_label else ("gemini" if "Gemini" in selected_mode_label else "both")
+    mapped_mode = (
+        "gemini" if "With Context" in selected_mode_label
+        else ("rule_based" if "Without Context" in selected_mode_label else "both")
+    )
     if mapped_mode != active_engine_mode:
         conv_db.update_conversation(active_thread, engine_mode=mapped_mode)
         active_engine_mode = mapped_mode
-        st.toast(f"Consultation engine updated to {selected_mode_label}!", icon="🎯")
+        st.toast(f"Consultation mode updated to {selected_mode_label}!", icon="🎯")
         st.rerun()
+
+# Trigger Pop-up Modal Dialog if an interrupt is pending
+if st.session_state.pending_interrupt:
+    render_hitl_modal(
+        st.session_state.pending_interrupt.get("result", {}),
+        active_thread,
+        active_engine_mode,
+    )
 
 # If conversation is empty, show sample questions
 if not thread_messages and not st.session_state.pending_interrupt:
@@ -1391,15 +1515,14 @@ for msg_idx, msg in enumerate(thread_messages):
         g_color = "#92400e" if is_out else "#6a1b9a"
 
         with st.chat_message("assistant", avatar="⚖️"):
-            col_text, col_src_side = st.columns([0.76, 0.24])
-
-            with col_text:
-                if choice == "rule_based":
+            if choice == "both":
+                col_rule, col_gemini = st.columns(2)
+                with col_rule:
                     st.markdown(
                         f"""
-                        <div style="background-color: #f1f3f4; padding: 6px 14px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; color: #202124; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #1a73e8;">
-                            <span>🏛️ Rule-Based Engine (PDF Grounded)</span>
-                            <span style="font-size: 0.76rem; background: {r_bg}; color: {r_color}; padding: 2px 8px; border-radius: 10px; font-weight: bold;">{r_badge}</span>
+                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
+                            <span>📜 Without Context (PDF Verbatim)</span>
+                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
                         </div>
                         """,
                         unsafe_allow_html=True,
@@ -1410,12 +1533,33 @@ for msg_idx, msg in enumerate(thread_messages):
                         st.markdown(rule_content)
                     render_engine_footer("pdf")
 
-                elif choice == "gemini":
+                with col_gemini:
                     st.markdown(
                         f"""
-                        <div style="background-color: #f3e8fd; padding: 6px 14px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; color: #6a1b9a; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #9c27b0;">
+                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
+                            <span>✨ With Context (Gemini AI Synthesis)</span>
+                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if gemini_content:
+                        if should_stream:
+                            st.write_stream(stream_text_word_by_word(gemini_content))
+                        else:
+                            st.markdown(gemini_content)
+                    else:
+                        st.info("Gemini context synthesis is not yet generated for this turn.")
+                    render_engine_footer("ai")
+
+            elif choice == "gemini":
+                tab_ctx, tab_verbatim = st.tabs(["✨ With Context (Gemini AI)", "📜 Without Context (PDF Verbatim)"])
+                with tab_ctx:
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
                             <span>✨ Gemini AI (Context-Aware Synthesis)</span>
-                            <span style="font-size: 0.76rem; background: {g_bg}; color: {g_color}; padding: 2px 8px; border-radius: 10px; font-weight: bold;">{g_badge}</span>
+                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
                         </div>
                         """,
                         unsafe_allow_html=True,
@@ -1426,230 +1570,105 @@ for msg_idx, msg in enumerate(thread_messages):
                         st.markdown(gemini_content or msg.content)
                     render_engine_footer("ai")
 
-                else:  # "both" or default dual view
-                    col_rule, col_gemini = st.columns(2)
+                with tab_verbatim:
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
+                            <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
+                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(rule_content)
+                    render_engine_footer("pdf")
 
-                    with col_rule:
-                        st.markdown(
-                            f"""
-                            <div style="background-color: #f1f3f4; padding: 6px 12px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; color: #202124; display: flex; justify-content: space-between; align-items: center;">
-                                <span>🏛️ Rule-Based Engine</span>
-                                <span style="font-size: 0.74rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 8px;">{r_badge}</span>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                        if should_stream:
-                            st.write_stream(stream_text_word_by_word(rule_content))
-                        else:
-                            st.markdown(rule_content)
-                        render_engine_footer("pdf")
+            else:  # "rule_based"
+                tab_verbatim, tab_ctx = st.tabs(["📜 Without Context (PDF Verbatim)", "✨ With Context (Gemini AI)"])
+                with tab_verbatim:
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
+                            <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
+                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if should_stream:
+                        st.write_stream(stream_text_word_by_word(rule_content))
+                    else:
+                        st.markdown(rule_content)
+                    render_engine_footer("pdf")
 
-                    with col_gemini:
-                        st.markdown(
-                            f"""
-                            <div style="background-color: #f3e8fd; padding: 6px 12px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; color: #6a1b9a; display: flex; justify-content: space-between; align-items: center;">
-                                <span>✨ Gemini AI</span>
-                                <span style="font-size: 0.74rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 8px;">{g_badge}</span>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                        if gemini_content:
-                            if should_stream:
-                                st.write_stream(stream_text_word_by_word(gemini_content))
-                            else:
-                                st.markdown(gemini_content)
-                        else:
-                            st.info("Gemini response is synthesizing or not available for this turn.")
-                        render_engine_footer("ai")
+                with tab_ctx:
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
+                            <span>✨ Gemini AI (Context-Aware Synthesis)</span>
+                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if gemini_content:
+                        st.markdown(gemini_content)
+                    else:
+                        st.info("Gemini context synthesis is not yet generated for this turn. Click 'Rerun with Gemini' below to synthesize.")
+                    render_engine_footer("ai")
 
-                # Turn Actions: Bookmark & Time Travel Rerun with Gemini
-                col_act_bm, col_act_tt = st.columns([0.48, 0.52])
-                turn_art = src_info.get("article_number")
-                turn_title = src_info.get("article_title") or (f"Article {turn_art}" if turn_art else "Constitutional Analysis")
+            # Clean full-width Provenance Bar
+            render_message_provenance_bar(src_info)
 
-                # Extract the prompt question for this turn
-                turn_question = ""
-                for prev_i in range(msg_idx - 1, -1, -1):
-                    if isinstance(thread_messages[prev_i], HumanMessage):
-                        turn_question = thread_messages[prev_i].content
-                        break
-                if not turn_question:
-                    turn_question = msg.additional_kwargs.get("prior_user_query", "")
+            # Turn Actions: Bookmark & Time Travel Rerun with Gemini
+            col_act_bm, col_act_tt = st.columns([0.48, 0.52])
+            turn_art = src_info.get("article_number")
+            turn_title = src_info.get("article_title") or (f"Article {turn_art}" if turn_art else "Constitutional Analysis")
 
-                with col_act_bm:
-                    if turn_art:
-                        if is_article_bookmarked(turn_art, user_id=_active_uid()):
-                            st.caption(f"⭐ *Article {turn_art} Bookmarked*")
-                        else:
-                            if st.button(f"⭐ Bookmark Art. {turn_art}", key=f"bm_hist_{msg_idx}"):
-                                bookmark_article(
-                                    turn_art,
-                                    turn_title,
-                                    notes=turn_question,
-                                    user_id=_active_uid(),
-                                )
-                                st.toast(f"Saved Article {turn_art} to Store!", icon="⭐")
-                                st.rerun()
+            # Extract the prompt question for this turn
+            turn_question = ""
+            for prev_i in range(msg_idx - 1, -1, -1):
+                if isinstance(thread_messages[prev_i], HumanMessage):
+                    turn_question = thread_messages[prev_i].content
+                    break
+            if not turn_question:
+                turn_question = msg.additional_kwargs.get("prior_user_query", "")
 
-                with col_act_tt:
-                    if turn_question:
-                        if st.button("⏳ Rerun with Gemini (Time Travel)", key=f"tt_hist_{msg_idx}", help="LangGraph Time Travel: Rewind conversation to this turn and synthesize answer with Gemini AI"):
-                            with st.spinner("⏳ Time Travel: Rewinding checkpoint & rerunning with Gemini AI..."):
-                                time_travel_rerun_with_gemini(
-                                    thread_id=active_thread,
-                                    question=turn_question,
-                                    checkpointer=checkpointer,
-                                    store=global_store,
-                                    user_id=_active_uid(),
-                                    rerank_mode="rerank",
-                                )
-                                st.session_state.just_streamed_thread = active_thread
-                                st.session_state.just_streamed_choice = "gemini"
-                                conv_db.update_conversation(active_thread, engine_mode="gemini")
-                                st.toast("⏳ Time Travel Complete: Rerun with Gemini AI!", icon="✨")
-                                st.rerun()
+            with col_act_bm:
+                if turn_art:
+                    if is_article_bookmarked(turn_art, user_id=_active_uid()):
+                        st.caption(f"⭐ *Article {turn_art} Bookmarked*")
+                    else:
+                        if st.button(f"⭐ Bookmark Art. {turn_art}", key=f"bm_hist_{msg_idx}"):
+                            bookmark_article(
+                                turn_art,
+                                turn_title,
+                                notes=turn_question,
+                                user_id=_active_uid(),
+                            )
+                            st.toast(f"Saved Article {turn_art} to Store!", icon="⭐")
+                            st.rerun()
 
-            with col_src_side:
-                # Render source provenance card directly beside the text
-                render_source_sidebar_card(src_info)
+            with col_act_tt:
+                if turn_question:
+                    if st.button("⏳ Rerun with Gemini (Time Travel)", key=f"tt_hist_{msg_idx}", help="LangGraph Time Travel: Rewind conversation to this turn and synthesize answer with Gemini AI"):
+                        with st.spinner("⏳ Time Travel: Rewinding checkpoint & rerunning with Gemini AI..."):
+                            time_travel_rerun_with_gemini(
+                                thread_id=active_thread,
+                                question=turn_question,
+                                checkpointer=checkpointer,
+                                store=global_store,
+                                user_id=_active_uid(),
+                                rerank_mode="rerank",
+                            )
+                        st.session_state.just_streamed_thread = active_thread
+                        st.session_state.just_streamed_choice = "gemini"
+                        conv_db.update_conversation(active_thread, engine_mode="gemini")
+                        st.toast("⏳ Time Travel Complete: Rerun with Gemini AI!", icon="✨")
+                        st.rerun()
 
 if is_last_and_streaming:
     st.session_state.just_streamed_thread = None
-
-# Render Pending Interrupt (Human-in-the-Loop Permission Breakpoint)
-if st.session_state.pending_interrupt:
-    p_data = st.session_state.pending_interrupt
-    paused_result = p_data.get("result", {})
-    req_review = paused_result.get("requires_human_review", False)
-    docs = paused_result.get("retrieved_documents", [])
-    q_text = paused_result.get("question", "")
-    art_num = paused_result.get("article_number") or paused_result.get("last_discussed_article")
-    art_title = paused_result.get("last_discussed_title") or (docs[0].get("article_title") if docs else "")
-    part_name = docs[0].get("part") if docs else ""
-    page_start = docs[0].get("page_start") if docs else ""
-    topic_name = paused_result.get("topic")
-
-    raw_q = paused_result.get("raw_question") or paused_result.get("prior_user_query") or q_text
-    rewritten_q = paused_result.get("rewritten_question")
-    show_rewritten = bool(rewritten_q and rewritten_q.strip().lower() != raw_q.strip().lower())
-
-    with st.chat_message("assistant", avatar="⚖️"):
-        st.markdown(
-            f"""
-            <div style="background: linear-gradient(135deg, #fef9e7 0%, #fffbf2 100%); border: 2px solid #d97706; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.1);">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <h4 style="margin: 0; color: #92400e; font-size: 1.15rem;">
-                        ✋ Permission Required Before Answering
-                    </h4>
-                    <span style="background: #d97706; color: white; padding: 3px 10px; border-radius: 16px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">
-                        LANGGRAPH INTERRUPT
-                    </span>
-                </div>
-                <p style="margin: 0 0 6px 0; color: #451a03; font-size: 0.95rem;">
-                    <strong>Your Question:</strong> <em>"{raw_q}"</em>
-                </p>
-                {f'<div style="margin: 0 0 8px 0; color: #1e3a8a; font-size: 0.88rem; background: #e0f2fe; padding: 6px 12px; border-radius: 6px; border-left: 3px solid #0284c7;"><strong>🔄 LLM Canonical Query (Grounded for Rule Engine):</strong> <em>"{rewritten_q}"</em></div>' if show_rewritten else ''}
-                <div style="background: rgba(255, 255, 255, 0.85); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; border-left: 4px solid #d97706;">
-                    <div style="font-weight: 600; color: #78350f; font-size: 0.9rem; margin-bottom: 4px;">
-                        🏛️ Verified Constitutional Subject Identified:
-                    </div>
-                    <div style="color: #1f2937; font-size: 0.92rem;">
-                        {f'• <strong>Article {art_num}:</strong> {art_title}' if art_num else f'• <strong>Topic:</strong> {topic_name or "Constitutional Analysis"}'}
-                        {f' (<em>{part_name}</em>, Source: constitution.pdf, Page {page_start})' if page_start else ''}
-                    </div>
-                </div>
-                <p style="margin: 0; color: #78350f; font-size: 0.92rem; font-weight: 500;">
-                    Execution is paused at the LangGraph breakpoint. <strong>Please decide whether to apply Gemini Semantic Reranking and grant permission to answer:</strong>
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        cand_list = paused_result.get("candidate_documents") or paused_result.get("retrieved_documents") or []
-        if len(cand_list) > 1:
-            cand_summary = ", ".join([f"Article {c.get('article_number')}" for c in cand_list[:5]])
-            st.caption(f"📚 **{len(cand_list)} Candidate Provisions in Database**: {cand_summary}")
-
-        st.markdown("###### 🔍 Human Decision: RAG Second-Stage Reranking:")
-        hitl_rerank_choice = st.radio(
-            "Reranking Strategy:",
-            ["🔄 Apply Gemini Semantic Reranking (AI Cross-Scoring)", "⚡ Direct Retrieval (No Reranking)"],
-            horizontal=True,
-            key="hitl_radio_rerank",
-            help="Choose whether Gemini should score and reorder candidate articles, or use direct database ranking.",
-        )
-        selected_rerank_val = "rerank" if "Apply Gemini" in hitl_rerank_choice else "no_rerank"
-
-        st.markdown("##### 🎯 Choose Engine to Grant Permission & Receive Answer:")
-        is_mode_rule = (active_engine_mode == "rule_based")
-        is_mode_gemini = (active_engine_mode == "gemini")
-        is_mode_both = (active_engine_mode == "both")
-
-        col_c1, col_c2, col_c3, col_c4 = st.columns([1.1, 1.1, 1.1, 0.7])
-
-        with col_c1:
-            lbl_rule = "🏛️ Rule-Based Only" if not is_mode_rule else "🏛️ Rule-Based (Default)"
-            if st.button(lbl_rule, key="hitl_btn_rule", use_container_width=True, type="primary" if is_mode_rule else "secondary"):
-                with st.spinner("🏛️ Finalizing Rule-Based answer..."):
-                    res = resume_constitution_chat(
-                        active_thread,
-                        checkpointer=checkpointer,
-                        store=global_store,
-                        selected_engine="rule_based",
-                        rerank_choice=selected_rerank_val,
-                    )
-                st.session_state.pending_interrupt = None
-                st.session_state.just_streamed_thread = active_thread
-                st.session_state.just_streamed_choice = "rule_based"
-                conv_db.update_conversation(active_thread)
-                st.toast(f"Permission granted: Rule-Based ({selected_rerank_val})", icon="🏛️")
-                st.rerun()
-
-        with col_c2:
-            lbl_gemini = "✨ Gemini AI Only" if not is_mode_gemini else "✨ Gemini AI (Default)"
-            if st.button(lbl_gemini, key="hitl_btn_gemini", use_container_width=True, type="primary" if is_mode_gemini else "secondary"):
-                with st.spinner("✨ Finalizing Gemini AI answer..."):
-                    res = resume_constitution_chat(
-                        active_thread,
-                        checkpointer=checkpointer,
-                        store=global_store,
-                        selected_engine="gemini",
-                        rerank_choice=selected_rerank_val,
-                    )
-                st.session_state.pending_interrupt = None
-                st.session_state.just_streamed_thread = active_thread
-                st.session_state.just_streamed_choice = "gemini"
-                conv_db.update_conversation(active_thread)
-                st.toast(f"Permission granted: Gemini AI ({selected_rerank_val})", icon="✨")
-                st.rerun()
-
-        with col_c3:
-            lbl_both = "⚖️ Both Engines" if not is_mode_both else "⚖️ Both Engines (Default)"
-            if st.button(lbl_both, key="hitl_btn_both", use_container_width=True, type="primary" if is_mode_both else "secondary"):
-                with st.spinner("⚖️ Finalizing Dual View..."):
-                    res = resume_constitution_chat(
-                        active_thread,
-                        checkpointer=checkpointer,
-                        store=global_store,
-                        selected_engine="both",
-                        rerank_choice=selected_rerank_val,
-                    )
-                st.session_state.pending_interrupt = None
-                st.session_state.just_streamed_thread = active_thread
-                st.session_state.just_streamed_choice = "both"
-                conv_db.update_conversation(active_thread)
-                st.toast(f"Permission granted: Dual View ({selected_rerank_val})", icon="⚖️")
-                st.rerun()
-
-        with col_c4:
-            if st.button("❌ Discard Turn", key="hitl_btn_discard", use_container_width=True):
-                discard_thread_interrupted_turn(active_thread)
-                st.session_state.pending_interrupt = None
-                st.toast("Interrupted turn discarded.", icon="❌")
-                st.rerun()
 
 # --- User Input Handling with Event Streaming & Word-by-Word Output ---
 chat_disabled = bool(st.session_state.pending_interrupt)
@@ -1718,70 +1737,97 @@ if active_query and active_query.strip():
             g_bg = "#fed7aa" if is_out else "#ede7f6"
             g_color = "#92400e" if is_out else "#6a1b9a"
 
-            col_text, col_src_side = st.columns([0.76, 0.24])
-
-            with col_text:
-                if chosen_engine == "rule_based":
+            if chosen_engine == "both":
+                col_l, col_r = st.columns(2)
+                with col_l:
                     st.markdown(
                         f"""
-                        <div style="background-color: #f1f3f4; padding: 6px 14px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; color: #202124; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #1a73e8;">
-                            <span>🏛️ Rule-Based Engine (PDF Grounded)</span>
-                            <span style="font-size: 0.76rem; background: {r_bg}; color: {r_color}; padding: 2px 8px; border-radius: 10px; font-weight: bold;">{r_badge}</span>
+                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
+                            <span>📜 Without Context (PDF Verbatim)</span>
+                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
                     st.write_stream(stream_text_word_by_word(rule_ans))
                     render_engine_footer("pdf")
-                elif chosen_engine == "gemini":
+
+                with col_r:
                     st.markdown(
                         f"""
-                        <div style="background-color: #f3e8fd; padding: 6px 14px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; color: #6a1b9a; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #9c27b0;">
-                            <span>✨ Gemini AI (Context-Aware Synthesis)</span>
-                            <span style="font-size: 0.76rem; background: {g_bg}; color: {g_color}; padding: 2px 8px; border-radius: 10px; font-weight: bold;">{g_badge}</span>
+                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
+                            <span>✨ With Context (Gemini AI Synthesis)</span>
+                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
                     st.write_stream(stream_text_word_by_word(gemini_ans))
                     render_engine_footer("ai")
-                else:
-                    col_l, col_r = st.columns(2)
 
-                    with col_l:
-                        st.markdown(
-                            f"""
-                            <div style="background-color: #f1f3f4; padding: 6px 12px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; color: #202124; display: flex; justify-content: space-between; align-items: center;">
-                                <span>🏛️ Rule-Based Engine</span>
-                                <span style="font-size: 0.74rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 8px;">{r_badge}</span>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                        # Feature 6: Word-by-word streaming for Rule Engine
-                        st.write_stream(stream_text_word_by_word(rule_ans))
-                        render_engine_footer("pdf")
+            elif chosen_engine == "gemini":
+                tab_ctx, tab_verbatim = st.tabs(["✨ With Context (Gemini AI)", "📜 Without Context (PDF Verbatim)"])
+                with tab_ctx:
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
+                            <span>✨ Gemini AI (Context-Aware Synthesis)</span>
+                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.write_stream(stream_text_word_by_word(gemini_ans))
+                    render_engine_footer("ai")
 
-                    with col_r:
-                        st.markdown(
-                            f"""
-                            <div style="background-color: #f3e8fd; padding: 6px 12px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; color: #6a1b9a; display: flex; justify-content: space-between; align-items: center;">
-                                <span>✨ Gemini AI</span>
-                                <span style="font-size: 0.74rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 8px;">{g_badge}</span>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                        # Feature 6: Word-by-word streaming for Gemini AI
-                        st.write_stream(stream_text_word_by_word(gemini_ans))
-                        render_engine_footer("ai")
+                with tab_verbatim:
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
+                            <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
+                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(rule_ans)
+                    render_engine_footer("pdf")
 
-            with col_src_side:
-                # Render source provenance card directly beside the text
-                render_source_sidebar_card(src_info)
+            else:  # "rule_based"
+                tab_verbatim, tab_ctx = st.tabs(["📜 Without Context (PDF Verbatim)", "✨ With Context (Gemini AI)"])
+                with tab_verbatim:
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
+                            <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
+                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.write_stream(stream_text_word_by_word(rule_ans))
+                    render_engine_footer("pdf")
+
+                with tab_ctx:
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #faf5ff; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #6b21a8; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #9333ea;">
+                            <span>✨ Gemini AI (Context-Aware Synthesis)</span>
+                            <span style="font-size: 0.72rem; background: {g_bg}; color: {g_color}; padding: 2px 7px; border-radius: 6px;">{g_badge}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if gemini_ans:
+                        st.markdown(gemini_ans)
+                    else:
+                        st.info("Gemini context synthesis is not yet generated for this turn. Click 'Rerun with Gemini' below to synthesize.")
+                    render_engine_footer("ai")
+
+            # Clean full-width Provenance Bar
+            render_message_provenance_bar(src_info)
 
             # Feature 3 & 8: Actions for current turn: Bookmark & Time Travel Rerun with Gemini
-            st.markdown("---")
             col_bm, col_tt_rerun = st.columns([0.48, 0.52])
             with col_bm:
                 if last_art:
