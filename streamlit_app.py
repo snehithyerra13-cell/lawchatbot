@@ -1320,71 +1320,9 @@ with col_mode_bar2:
         st.toast(f"Consultation engine updated to {selected_mode_label}!", icon="🎯")
         st.rerun()
 
-# If conversation is empty, show welcome banner & new chat engine selection
+# If conversation is empty, show sample questions
 if not thread_messages and not st.session_state.pending_interrupt:
-    st.markdown(
-        """
-        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border: 2px solid #86efac; border-radius: 12px; padding: 18px 22px; margin-bottom: 16px; margin-top: 8px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                <h3 style="margin: 0; color: #166534; font-size: 1.15rem;">🎯 Choose Engine Mode for this Chat</h3>
-                <span style="background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">NEW CHAT</span>
-            </div>
-            <p style="margin: 0 0 4px 0; color: #14532d; font-size: 0.90rem;">
-                Select whether you would like to consult the <strong>Rule-Based Engine (Verbatim PDF)</strong>, the <strong>Gemini API (AI Synthesis)</strong>, or <strong>Both Engines side-by-side</strong>:
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    col_e1, col_e2, col_e3 = st.columns(3)
-    with col_e1:
-        is_sel = (active_engine_mode == "rule_based")
-        if st.button(
-            "🏛️ Rule-Based Engine Only\n\n*(Verbatim PDF Grounded)*",
-            key="btn_sel_rule",
-            use_container_width=True,
-            type="primary" if is_sel else "secondary",
-            help="Strict deterministic lookup in constitution.pdf. Zero hallucination.",
-        ):
-            conv_db.update_conversation(active_thread, engine_mode="rule_based")
-            st.toast("Chat set to Rule-Based Engine Only!", icon="🏛️")
-            st.rerun()
-
-    with col_e2:
-        is_sel = (active_engine_mode == "gemini")
-        if st.button(
-            "✨ Gemini API Only\n\n*(Accessible AI Synthesis)*",
-            key="btn_sel_gemini",
-            use_container_width=True,
-            type="primary" if is_sel else "secondary",
-            help="Generative plain-English synthesis, case law doctrines, and conceptual explanations.",
-        ):
-            conv_db.update_conversation(active_thread, engine_mode="gemini")
-            st.toast("Chat set to Gemini API Only!", icon="✨")
-            st.rerun()
-
-    with col_e3:
-        is_sel = (active_engine_mode == "both")
-        if st.button(
-            "⚖️ Both Engines (Dual View)\n\n*(Side-by-Side Comparison)*",
-            key="btn_sel_both",
-            use_container_width=True,
-            type="primary" if is_sel else "secondary",
-            help="Displays side-by-side comparative answers from both engines.",
-        ):
-            conv_db.update_conversation(active_thread, engine_mode="both")
-            st.toast("Chat set to Both Engines (Dual View)!", icon="⚖️")
-            st.rerun()
-
-    current_engine_name = (
-        "🏛️ Rule-Based Engine Only (Verbatim PDF Grounded)"
-        if active_engine_mode == "rule_based"
-        else ("✨ Gemini API Only (Generative AI Synthesis)" if active_engine_mode == "gemini" else "⚖️ Both Engines (Side-by-Side Dual View)")
-    )
-    st.markdown(f"**Active Mode:** `{current_engine_name}`")
-    st.markdown("---")
-    st.markdown("**Select a question below or enter your own query:**")
+    st.markdown("<div style='margin-top: 14px; margin-bottom: 8px; font-weight: 600; color: #64748b; font-size: 0.88rem;'>💡 Select a sample question or type your constitutional query below:</div>", unsafe_allow_html=True)
 
     suggested_questions = [
         "What is Article 21?",
