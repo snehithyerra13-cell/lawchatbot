@@ -17,7 +17,12 @@ from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
-FALLBACK_MODELS = ["gemini-3.5-flash-lite", "gemini-flash-latest"]
+FALLBACK_MODELS = [
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+]
 
 _HTTP_SESSION = None
 
