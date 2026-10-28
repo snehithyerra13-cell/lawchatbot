@@ -31,6 +31,7 @@ from app.graph.workflow import (
     resume_constitution_chat,
     run_constitution_chat,
     run_constitution_chat_stream,
+    time_travel_rerun_with_gemini,
 )
 from app.persistence.checkpointer import (
     delete_thread_checkpoints,
@@ -1067,16 +1068,33 @@ with st.sidebar:
                 key="branch_q_input",
                 placeholder="e.g. Compare it with Article 19",
             )
-            if st.button("⏪ Branch Conversation from Checkpoint", use_container_width=True):
-                if branch_q.strip():
-                    with st.spinner("Time Traveling: branching from checkpoint..."):
-                        branch_from_checkpoint(
-                            active_t,
-                            selected_snap["checkpoint_id"],
-                            branch_q.strip(),
+            col_tt_b1, col_tt_b2 = st.columns(2)
+            with col_tt_b1:
+                if st.button("⏪ Branch Conversation", use_container_width=True, help="Fork conversation from this checkpoint with the new question above"):
+                    if branch_q.strip():
+                        with st.spinner("Time Traveling: branching from checkpoint..."):
+                            branch_from_checkpoint(
+                                active_t,
+                                selected_snap["checkpoint_id"],
+                                branch_q.strip(),
+                                checkpointer=checkpointer,
+                                store=global_store,
+                            )
+                        st.rerun()
+
+            with col_tt_b2:
+                if st.button("⏳ Rerun with Gemini", key="btn_sb_tt_gemini", use_container_width=True, help="Rewind to selected checkpoint and rerun using Gemini AI Key"):
+                    with st.spinner("Time Traveling: rerunning checkpoint with Gemini AI..."):
+                        time_travel_rerun_with_gemini(
+                            thread_id=active_t,
+                            checkpoint_id=selected_snap["checkpoint_id"],
+                            question=branch_q.strip() or selected_snap.get("question") or None,
                             checkpointer=checkpointer,
                             store=global_store,
+                            user_id=_active_uid(),
+                            rerank_mode="rerank",
                         )
+                    st.toast(f"⏳ Time Travel Rerun from checkpoint {selected_snap['checkpoint_id'][:8]}!", icon="✨")
                     st.rerun()
 
             with st.expander("Inspect Raw Checkpoint State", expanded=False):
@@ -1446,6 +1464,53 @@ for msg_idx, msg in enumerate(thread_messages):
                             st.info("Gemini response is synthesizing or not available for this turn.")
                         render_engine_footer("ai")
 
+                # Turn Actions: Bookmark & Time Travel Rerun with Gemini
+                col_act_bm, col_act_tt = st.columns([0.48, 0.52])
+                turn_art = src_info.get("article_number")
+                turn_title = src_info.get("article_title") or (f"Article {turn_art}" if turn_art else "Constitutional Analysis")
+
+                # Extract the prompt question for this turn
+                turn_question = ""
+                for prev_i in range(msg_idx - 1, -1, -1):
+                    if isinstance(thread_messages[prev_i], HumanMessage):
+                        turn_question = thread_messages[prev_i].content
+                        break
+                if not turn_question:
+                    turn_question = msg.additional_kwargs.get("prior_user_query", "")
+
+                with col_act_bm:
+                    if turn_art:
+                        if is_article_bookmarked(turn_art, user_id=_active_uid()):
+                            st.caption(f"⭐ *Article {turn_art} Bookmarked*")
+                        else:
+                            if st.button(f"⭐ Bookmark Art. {turn_art}", key=f"bm_hist_{msg_idx}"):
+                                bookmark_article(
+                                    turn_art,
+                                    turn_title,
+                                    notes=turn_question,
+                                    user_id=_active_uid(),
+                                )
+                                st.toast(f"Saved Article {turn_art} to Store!", icon="⭐")
+                                st.rerun()
+
+                with col_act_tt:
+                    if turn_question:
+                        if st.button("⏳ Rerun with Gemini (Time Travel)", key=f"tt_hist_{msg_idx}", help="LangGraph Time Travel: Rewind conversation to this turn and synthesize answer with Gemini AI"):
+                            with st.spinner("⏳ Time Travel: Rewinding checkpoint & rerunning with Gemini AI..."):
+                                time_travel_rerun_with_gemini(
+                                    thread_id=active_thread,
+                                    question=turn_question,
+                                    checkpointer=checkpointer,
+                                    store=global_store,
+                                    user_id=_active_uid(),
+                                    rerank_mode="rerank",
+                                )
+                                st.session_state.just_streamed_thread = active_thread
+                                st.session_state.just_streamed_choice = "gemini"
+                                conv_db.update_conversation(active_thread, engine_mode="gemini")
+                                st.toast("⏳ Time Travel Complete: Rerun with Gemini AI!", icon="✨")
+                                st.rerun()
+
             with col_src_side:
                 # Render source provenance card directly beside the text
                 render_source_sidebar_card(src_info)
@@ -1715,15 +1780,15 @@ if active_query and active_query.strip():
                 # Render source provenance card directly beside the text
                 render_source_sidebar_card(src_info)
 
-            # Feature 3: Action to bookmark article into Store
-            if last_art:
-                st.markdown("---")
-                col_bm, col_bm_space = st.columns([0.3, 0.7])
-                with col_bm:
+            # Feature 3 & 8: Actions for current turn: Bookmark & Time Travel Rerun with Gemini
+            st.markdown("---")
+            col_bm, col_tt_rerun = st.columns([0.48, 0.52])
+            with col_bm:
+                if last_art:
                     if is_article_bookmarked(last_art, user_id=_active_uid()):
-                        st.caption(f"⭐ *Article {last_art} is saved in your cross-thread Store bookmarks.*")
+                        st.caption(f"⭐ *Article {last_art} Bookmarked in Store*")
                     else:
-                        if st.button(f"⭐ Bookmark Article {last_art} to Store", key=f"bm_btn_{last_art}"):
+                        if st.button(f"⭐ Bookmark Article {last_art}", key=f"bm_btn_curr_{last_art}"):
                             bookmark_article(
                                 last_art,
                                 result.get("last_discussed_title", f"Article {last_art}"),
@@ -1732,6 +1797,23 @@ if active_query and active_query.strip():
                             )
                             st.toast(f"Saved Article {last_art} to cross-thread Store!", icon="⭐")
                             st.rerun()
+
+            with col_tt_rerun:
+                if st.button("⏳ Rerun with Gemini (Time Travel)", key="btn_tt_rerun_current", help="LangGraph Time Travel: Rewind to checkpoint and synthesize answer with Gemini AI"):
+                    with st.spinner("⏳ Time Travel: Rewinding checkpoint & synthesizing with Gemini AI..."):
+                        time_travel_rerun_with_gemini(
+                            thread_id=active_thread,
+                            question=clean_query,
+                            checkpointer=checkpointer,
+                            store=global_store,
+                            user_id=_active_uid(),
+                            rerank_mode="rerank",
+                        )
+                        st.session_state.just_streamed_thread = active_thread
+                        st.session_state.just_streamed_choice = "gemini"
+                        conv_db.update_conversation(active_thread, engine_mode="gemini")
+                        st.toast("⏳ Time Travel Complete: Regenerated with Gemini AI!", icon="✨")
+                        st.rerun()
 
     # Update conversation last modified timestamp
     conv_db.update_conversation(active_thread)

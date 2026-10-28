@@ -438,6 +438,9 @@ def branch_from_checkpoint(
     new_question: str,
     checkpointer: Optional[BaseCheckpointSaver] = None,
     store: Optional[Any] = None,
+    selected_engine: Optional[str] = "both",
+    rerank_mode: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Time Travel: Fork/branch conversation from a specific historical checkpoint."""
     return run_constitution_chat(
@@ -446,6 +449,51 @@ def branch_from_checkpoint(
         checkpointer=checkpointer,
         store=store,
         checkpoint_id=checkpoint_id,
+        selected_engine=selected_engine or "both",
+        rerank_mode=rerank_mode,
+        user_id=user_id,
+    )
+
+
+def time_travel_rerun_with_gemini(
+    thread_id: str,
+    checkpoint_id: Optional[str] = None,
+    question: Optional[str] = None,
+    checkpointer: Optional[BaseCheckpointSaver] = None,
+    store: Optional[Any] = None,
+    user_id: Optional[str] = None,
+    rerank_mode: Optional[str] = "rerank",
+) -> Dict[str, Any]:
+    """Time Travel: Rewind to a previous checkpoint and rerun/regenerate using Gemini AI.
+    
+    Demonstrates LangGraph Time Travel architectural pillar:
+    1. Loads the historical checkpoint state snapshot from SQLite checkpointer.
+    2. Rewinds graph execution to that checkpoint.
+    3. Re-executes the constitutional turn using Google Gemini API Key and RAG Reranking.
+    """
+    graph = get_compiled_graph(checkpointer=checkpointer, store=store)
+    cfg: Dict[str, Any] = {"configurable": {"thread_id": thread_id}}
+    if checkpoint_id:
+        cfg["configurable"]["checkpoint_id"] = checkpoint_id
+
+    # Retrieve question from snapshot if not explicitly passed
+    target_q = question
+    if not target_q:
+        snap = graph.get_state(cfg)
+        if snap and snap.values:
+            target_q = snap.values.get("question") or snap.values.get("raw_question")
+    if not target_q:
+        target_q = "Explain the constitutional principle in detail"
+
+    return run_constitution_chat(
+        question=target_q,
+        thread_id=thread_id,
+        checkpointer=checkpointer,
+        store=store,
+        checkpoint_id=checkpoint_id,
+        selected_engine="gemini",
+        rerank_mode=rerank_mode or "rerank",
+        user_id=user_id,
     )
 
 

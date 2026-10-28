@@ -5,7 +5,11 @@ from __future__ import annotations
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 
-from app.graph.workflow import resume_constitution_chat, run_constitution_chat
+from app.graph.workflow import (
+    resume_constitution_chat,
+    run_constitution_chat,
+    time_travel_rerun_with_gemini,
+)
 from app.persistence.store import get_global_store
 from app.retrieval.knowledge_base import get_knowledge_base
 from app.retrieval.reranker import compute_heuristic_rerank_score, rerank_candidates
@@ -93,3 +97,33 @@ def test_hitl_decision_resume_with_rerank():
 
     assert "Article 14" in resumed.get("answer", "")
     assert resumed.get("rerank_metadata") is not None
+
+
+def test_time_travel_rerun_with_gemini():
+    """Verify Time Travel rewind & rerun capability using checkpoint state."""
+    saver = MemorySaver()
+    store = get_global_store()
+    thread_id = "test-time-travel-rerun-thread"
+
+    # Turn 1: Discuss Article 21
+    res1 = run_constitution_chat(
+        question="What is Article 21 of the Indian Constitution?",
+        thread_id=thread_id,
+        checkpointer=saver,
+        store=store,
+    )
+    assert "Article 21" in res1.get("answer", "")
+
+    # Time Travel Rerun using checkpoint
+    rerun_res = time_travel_rerun_with_gemini(
+        thread_id=thread_id,
+        question="What is Article 21 of the Indian Constitution?",
+        checkpointer=saver,
+        store=store,
+        rerank_mode="rerank",
+    )
+
+    assert rerun_res is not None
+    assert rerun_res.get("selected_engine") == "gemini"
+    assert rerun_res.get("rerank_metadata") is not None
+    assert len(rerun_res.get("messages", [])) >= 2
