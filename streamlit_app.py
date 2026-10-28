@@ -260,28 +260,30 @@ def render_message_provenance_bar(info: Dict[str, Any]) -> None:
 
     time_badge = ""
     if info.get("exec_time") is not None:
-        time_badge = f"""<span style="font-size: 0.74rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">⏱️ {info['exec_time']:.2f}s</span>"""
+        time_badge = f'<span style="font-size: 0.74rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">⏱️ {info["exec_time"]:.2f}s</span>'
 
     rerank_badge = ""
     if info.get("rerank_score") is not None:
-        rerank_badge = f"""<span style="font-size: 0.72rem; color: #6b21a8; background: #f3e8ff; padding: 2px 7px; border-radius: 6px; font-weight: 600; border: 1px solid #e9d5ff;">🔄 Rerank: {info['rerank_score']}/100</span>"""
+        rerank_badge = f'<span style="font-size: 0.72rem; color: #6b21a8; background: #f3e8ff; padding: 2px 7px; border-radius: 6px; font-weight: 600; border: 1px solid #e9d5ff;">🔄 Rerank: {info["rerank_score"]}/100</span>'
     elif info.get("rerank_metadata") and info["rerank_metadata"].get("method") == "none":
-        rerank_badge = """<span style="font-size: 0.72rem; color: #0369a1; background: #e0f2fe; padding: 2px 7px; border-radius: 6px; font-weight: 600; border: 1px solid #bae6fd;">⚡ Direct RAG</span>"""
+        rerank_badge = '<span style="font-size: 0.72rem; color: #0369a1; background: #e0f2fe; padding: 2px 7px; border-radius: 6px; font-weight: 600; border: 1px solid #bae6fd;">⚡ Direct RAG</span>'
 
-    bar_html = f"""
-    <div style="margin-top: 10px; margin-bottom: 6px; padding: 6px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; color: #334155;">
-            <span style="font-weight: 600; color: #0f172a;">📄 {doc_str}</span>
-            <span style="color: #94a3b8;">&bull;</span>
-            <span style="color: #1a73e8; font-weight: 600;">{art_label}</span>
-            <span style="color: #64748b;">({part_str}, {page_str})</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-            {rerank_badge}
-            {time_badge}
-        </div>
-    </div>
-    """
+    right_items = [b for b in [rerank_badge, time_badge] if b]
+    right_html = f'<div style="display: flex; align-items: center; gap: 6px;">{" ".join(right_items)}</div>' if right_items else ""
+
+    bar_html = (
+        f'<div style="margin-top: 10px; margin-bottom: 6px; padding: 6px 12px; background: #f8fafc; '
+        f'border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; '
+        f'justify-content: space-between; flex-wrap: wrap; gap: 8px;">'
+        f'<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; color: #334155;">'
+        f'<span style="font-weight: 600; color: #0f172a;">📄 {doc_str}</span>'
+        f'<span style="color: #94a3b8;">&bull;</span>'
+        f'<span style="color: #1a73e8; font-weight: 600;">{art_label}</span>'
+        f'<span style="color: #64748b;">({part_str}, {page_str})</span>'
+        f'</div>'
+        f'{right_html}'
+        f'</div>'
+    )
     st.markdown(bar_html, unsafe_allow_html=True)
 
     if info.get("docs") and len(info["docs"]) > 1:
