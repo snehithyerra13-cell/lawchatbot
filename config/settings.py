@@ -50,6 +50,15 @@ class Settings:
 
     # RAG Datasets & Evaluation Paths
     rag_dir: Path = DATA_DIR / "rag"
+    source_dir: Path = DATA_DIR / "source"
+    processed_dir: Path = DATA_DIR / "processed"
+    processed_chunks_path: Path = DATA_DIR / "processed" / "constitution_chunks.jsonl"
+    ingestion_manifest_path: Path = DATA_DIR / "processed" / "ingestion_manifest.json"
+    evaluation_dir: Path = DATA_DIR / "evaluation"
+    golden_eval_dir: Path = DATA_DIR / "evaluation" / "golden"
+    normal_eval_dir: Path = DATA_DIR / "evaluation" / "normal"
+    indexes_dir: Path = DATA_DIR / "indexes"
+    reports_dir: Path = PROJECT_ROOT / "reports"
     normal_retrieval_dataset_path: Path = DATA_DIR / "rag" / "normal_retrieval_dataset.jsonl"
     golden_evaluation_dataset_path: Path = (
         PROJECT_ROOT / "tests" / "evaluation" / "golden_reranking_dataset.jsonl"
@@ -101,6 +110,12 @@ class Settings:
         """Ensure all required project directories exist."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.rag_dir.mkdir(parents=True, exist_ok=True)
+        self.source_dir.mkdir(parents=True, exist_ok=True)
+        self.processed_dir.mkdir(parents=True, exist_ok=True)
+        self.golden_eval_dir.mkdir(parents=True, exist_ok=True)
+        self.normal_eval_dir.mkdir(parents=True, exist_ok=True)
+        self.indexes_dir.mkdir(parents=True, exist_ok=True)
+        self.reports_dir.mkdir(parents=True, exist_ok=True)
         self.golden_evaluation_dataset_path.parent.mkdir(parents=True, exist_ok=True)
         self.evaluation_reports_dir.mkdir(parents=True, exist_ok=True)
 

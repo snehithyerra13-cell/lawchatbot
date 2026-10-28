@@ -1483,6 +1483,38 @@ with col_mode_bar2:
         st.toast(f"Consultation mode updated to {selected_mode_label}!", icon="🎯")
         st.rerun()
 
+col_rag_bar1, col_rag_bar2 = st.columns([0.32, 0.68])
+with col_rag_bar1:
+    st.markdown(
+        """<div style="margin-top: 6px; font-weight: 700; color: #1e293b; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+            <span>🔬 RAG Architecture:</span>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+with col_rag_bar2:
+    rag_options = [
+        "🚀 Advanced RAG (Hybrid RRF + Rerank)",
+        "⚡ Normal RAG (Vector Baseline)",
+        "⚖️ Compare Pipelines (Side-by-Side)",
+    ]
+    if "rag_pipeline_mode" not in st.session_state:
+        st.session_state.rag_pipeline_mode = "advanced"
+    curr_rag_idx = 0 if st.session_state.rag_pipeline_mode == "advanced" else (1 if st.session_state.rag_pipeline_mode == "normal" else 2)
+    selected_rag_label = st.radio(
+        "RAG Architecture Selection:",
+        rag_options,
+        index=curr_rag_idx,
+        horizontal=True,
+        label_visibility="collapsed",
+        key=f"rag_mode_radio_{active_thread}",
+    )
+    if "Advanced RAG" in selected_rag_label:
+        st.session_state.rag_pipeline_mode = "advanced"
+    elif "Normal RAG" in selected_rag_label:
+        st.session_state.rag_pipeline_mode = "normal"
+    else:
+        st.session_state.rag_pipeline_mode = "compare"
+
 # Trigger Pop-up Modal Dialog if an interrupt is pending
 if st.session_state.pending_interrupt:
     render_hitl_modal(
@@ -1597,53 +1629,28 @@ for msg_idx, msg in enumerate(thread_messages):
                     render_engine_footer(gem_footer_type)
 
             elif choice == "gemini":
-                tab_ctx, tab_verbatim = st.tabs(["✨ With Context (Gemini AI)", "📜 Without Context (PDF Verbatim)"])
-                with tab_ctx:
-                    st.markdown(gem_header_html, unsafe_allow_html=True)
-                    if should_stream and not is_gem_err:
-                        st.write_stream(stream_text_word_by_word(gemini_content or msg.content))
-                    else:
-                        st.markdown(gemini_content or msg.content)
-                    render_engine_footer(gem_footer_type)
-
-                with tab_verbatim:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
-                            <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
-                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(rule_content)
-                    render_engine_footer("pdf")
+                st.markdown(gem_header_html, unsafe_allow_html=True)
+                if should_stream and not is_gem_err:
+                    st.write_stream(stream_text_word_by_word(gemini_content or msg.content))
+                else:
+                    st.markdown(gemini_content or msg.content)
+                render_engine_footer(gem_footer_type)
 
             else:  # "rule_based"
-                tab_verbatim, tab_ctx = st.tabs(["📜 Without Context (PDF Verbatim)", "✨ With Context (Gemini AI)"])
-                with tab_verbatim:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
-                            <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
-                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    if should_stream:
-                        st.write_stream(stream_text_word_by_word(rule_content))
-                    else:
-                        st.markdown(rule_content)
-                    render_engine_footer("pdf")
-
-                with tab_ctx:
-                    st.markdown(gem_header_html, unsafe_allow_html=True)
-                    if gemini_content:
-                        st.markdown(gemini_content)
-                    else:
-                        st.info("Gemini context synthesis is not yet generated for this turn. Click 'Rerun with Gemini' below to synthesize.")
-                    render_engine_footer(gem_footer_type)
+                st.markdown(
+                    f"""
+                    <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
+                        <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
+                        <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                if should_stream:
+                    st.write_stream(stream_text_word_by_word(rule_content))
+                else:
+                    st.markdown(rule_content)
+                render_engine_footer("pdf")
 
             # Clean full-width Provenance Bar
             render_message_provenance_bar(src_info)
@@ -1836,50 +1843,25 @@ if active_query and active_query.strip():
                     render_engine_footer(gem_footer_type)
 
             elif chosen_engine == "gemini":
-                tab_ctx, tab_verbatim = st.tabs(["✨ With Context (Gemini AI)", "📜 Without Context (PDF Verbatim)"])
-                with tab_ctx:
-                    st.markdown(gem_header_html, unsafe_allow_html=True)
-                    if not is_gem_err:
-                        st.write_stream(stream_text_word_by_word(gemini_ans))
-                    else:
-                        st.markdown(gemini_ans)
-                    render_engine_footer(gem_footer_type)
-
-                with tab_verbatim:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
-                            <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
-                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(rule_ans)
-                    render_engine_footer("pdf")
+                st.markdown(gem_header_html, unsafe_allow_html=True)
+                if not is_gem_err:
+                    st.write_stream(stream_text_word_by_word(gemini_ans))
+                else:
+                    st.markdown(gemini_ans)
+                render_engine_footer(gem_footer_type)
 
             else:  # "rule_based"
-                tab_verbatim, tab_ctx = st.tabs(["📜 Without Context (PDF Verbatim)", "✨ With Context (Gemini AI)"])
-                with tab_verbatim:
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
-                            <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
-                            <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    st.write_stream(stream_text_word_by_word(rule_ans))
-                    render_engine_footer("pdf")
-
-                with tab_ctx:
-                    st.markdown(gem_header_html, unsafe_allow_html=True)
-                    if gemini_ans:
-                        st.markdown(gemini_ans)
-                    else:
-                        st.info("Gemini context synthesis is not yet generated for this turn. Click 'Rerun with Gemini' below to synthesize.")
-                    render_engine_footer(gem_footer_type)
+                st.markdown(
+                    f"""
+                    <div style="background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 700; margin-bottom: 8px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #0284c7;">
+                        <span>📜 Rule-Based Engine (Verbatim PDF Grounded)</span>
+                        <span style="font-size: 0.72rem; background: {r_bg}; color: {r_color}; padding: 2px 7px; border-radius: 6px;">{r_badge}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.write_stream(stream_text_word_by_word(rule_ans))
+                render_engine_footer("pdf")
 
             # Clean full-width Provenance Bar
             render_message_provenance_bar(src_info)

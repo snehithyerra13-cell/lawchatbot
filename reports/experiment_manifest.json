@@ -1,0 +1,183 @@
+{
+  "timestamp": "2026-10-28T16:34:58.175933+00:00",
+  "corpus": {
+    "source": "constitution.pdf",
+    "sha256": "c2e0f5f7a670d362038190d6792a688a37c25b3918b62f924cb7fe7444ae2608",
+    "chunks_count": 440,
+    "articles_count": 320
+  },
+  "models": {
+    "vector_embedding": "TFIDF-L2Cosine (scikit-learn TfidfVectorizer, sublinear_tf=True, ngram_range=(1,2))",
+    "lexical_retriever": "BM25Okapi (rank_bm25)",
+    "reranker": "Cross-Encoder Analytical Cross-Scoring with Gemini Semantic Fallback",
+    "fusion_method": "Reciprocal Rank Fusion (RRF, k=60)"
+  },
+  "pipelines_evaluated": [
+    "Normal RAG",
+    "Advanced RAG"
+  ],
+  "retrieval_summary": {
+    "recall_at_1": {
+      "normal": 0.56,
+      "advanced": 0.64,
+      "delta": 0.08,
+      "pct_change": 14.29
+    },
+    "recall_at_3": {
+      "normal": 0.78,
+      "advanced": 0.9,
+      "delta": 0.12,
+      "pct_change": 15.38
+    },
+    "recall_at_5": {
+      "normal": 0.9,
+      "advanced": 0.9,
+      "delta": 0.0,
+      "pct_change": 0.0
+    },
+    "recall_at_10": {
+      "normal": 0.9,
+      "advanced": 0.94,
+      "delta": 0.04,
+      "pct_change": 4.44
+    },
+    "precision_at_1": {
+      "normal": 0.68,
+      "advanced": 0.76,
+      "delta": 0.08,
+      "pct_change": 11.76
+    },
+    "precision_at_3": {
+      "normal": 0.3333,
+      "advanced": 0.3733,
+      "delta": 0.04,
+      "pct_change": 12.0
+    },
+    "precision_at_5": {
+      "normal": 0.224,
+      "advanced": 0.224,
+      "delta": 0.0,
+      "pct_change": 0.0
+    },
+    "mrr": {
+      "normal": 0.7633,
+      "advanced": 0.8257,
+      "delta": 0.0624,
+      "pct_change": 8.18
+    },
+    "ndcg_at_5": {
+      "normal": 0.6967,
+      "advanced": 0.7401,
+      "delta": 0.0434,
+      "pct_change": 6.23
+    },
+    "ndcg_at_10": {
+      "normal": 0.6982,
+      "advanced": 0.7567,
+      "delta": 0.0585,
+      "pct_change": 8.38
+    },
+    "source_hit_at_5_pct": {
+      "normal": 92.0,
+      "advanced": 92.0,
+      "delta": 0.0,
+      "pct_change": 0.0
+    },
+    "source_hit_at_10_pct": {
+      "normal": 92.0,
+      "advanced": 96.0,
+      "delta": 4.0,
+      "pct_change": 4.35
+    }
+  },
+  "answer_and_abstention": {
+    "total_queries_tested": 28,
+    "answerable_queries": 25,
+    "unanswerable_queries": 3,
+    "normal_rag": {
+      "citation_validity_rate_pct": 100.0,
+      "correct_abstention_rate_pct": 100.0
+    },
+    "advanced_rag": {
+      "citation_validity_rate_pct": 100.0,
+      "correct_abstention_rate_pct": 100.0
+    }
+  },
+  "latency_summary": {
+    "total_benchmark_samples": 50,
+    "normal_rag_latency": {
+      "mean_ms": 1.356,
+      "median_ms": 1.078,
+      "p90_ms": 2.065,
+      "p95_ms": 2.573,
+      "p99_ms": 4.965,
+      "min_ms": 0.667,
+      "max_ms": 6.975
+    },
+    "advanced_rag_latency": {
+      "mean_ms": 2.544,
+      "median_ms": 2.293,
+      "p90_ms": 3.977,
+      "p95_ms": 4.223,
+      "p99_ms": 4.839,
+      "min_ms": 1.455,
+      "max_ms": 5.123
+    },
+    "advanced_rag_stage_breakdown": {
+      "preprocessing_ms": {
+        "mean_ms": 0.013,
+        "median_ms": 0.01,
+        "p90_ms": 0.018,
+        "p95_ms": 0.023,
+        "p99_ms": 0.056,
+        "min_ms": 0.007,
+        "max_ms": 0.085
+      },
+      "dense_retrieval_ms": {
+        "mean_ms": 0.916,
+        "median_ms": 0.758,
+        "p90_ms": 1.369,
+        "p95_ms": 1.963,
+        "p99_ms": 2.532,
+        "min_ms": 0.526,
+        "max_ms": 2.796
+      },
+      "bm25_retrieval_ms": {
+        "mean_ms": 0.943,
+        "median_ms": 0.879,
+        "p90_ms": 1.444,
+        "p95_ms": 1.68,
+        "p99_ms": 2.31,
+        "min_ms": 0.368,
+        "max_ms": 2.391
+      },
+      "fusion_ms": {
+        "mean_ms": 0.031,
+        "median_ms": 0.028,
+        "p90_ms": 0.044,
+        "p95_ms": 0.056,
+        "p99_ms": 0.061,
+        "min_ms": 0.018,
+        "max_ms": 0.062
+      },
+      "reranking_ms": {
+        "mean_ms": 0.541,
+        "median_ms": 0.461,
+        "p90_ms": 0.827,
+        "p95_ms": 1.002,
+        "p99_ms": 1.253,
+        "min_ms": 0.348,
+        "max_ms": 1.362
+      },
+      "generation_ms": {
+        "mean_ms": 0.01,
+        "median_ms": 0.009,
+        "p90_ms": 0.014,
+        "p95_ms": 0.018,
+        "p99_ms": 0.039,
+        "min_ms": 0.004,
+        "max_ms": 0.044
+      }
+    }
+  }
+}

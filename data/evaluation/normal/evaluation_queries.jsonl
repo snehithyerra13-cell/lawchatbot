@@ -1,0 +1,25 @@
+{"query_id": "gold_001", "query": "What is Article 14 of the Constitution of India?", "query_category": "exact_article_lookup"}
+{"query_id": "gold_002", "query": "Explain Article 21 protection of life and personal liberty", "query_category": "exact_article_lookup"}
+{"query_id": "gold_003", "query": "What does Article 32 say about constitutional remedies and writ jurisdiction?", "query_category": "exact_article_lookup"}
+{"query_id": "gold_004", "query": "What are the Fundamental Duties under Article 51A?", "query_category": "exact_article_lookup"}
+{"query_id": "gold_005", "query": "What does the Preamble to the Constitution of India declare?", "query_category": "exact_article_lookup"}
+{"query_id": "gold_006", "query": "Can the government arbitrarily discriminate against any citizen without reasonable basis?", "query_category": "paraphrase"}
+{"query_id": "gold_007", "query": "Can a person be deprived of their liberty without following fair procedure established by law?", "query_category": "paraphrase"}
+{"query_id": "gold_008", "query": "How can citizens directly move the Supreme Court when fundamental rights are violated?", "query_category": "paraphrase"}
+{"query_id": "gold_009", "query": "Is the practice of untouchability strictly forbidden and punishable by law in India?", "query_category": "paraphrase"}
+{"query_id": "gold_010", "query": "Can children below the age of fourteen years be employed in hazardous factories or mines?", "query_category": "paraphrase"}
+{"query_id": "gold_011", "query": "Protection against double jeopardy and compelled self-incrimination in criminal trials", "query_category": "conceptual_query"}
+{"query_id": "gold_012", "query": "Right of children to free and compulsory primary education between ages 6 and 14", "query_category": "conceptual_query"}
+{"query_id": "gold_013", "query": "Freedom of conscience and the right freely to profess, practise and propagate religion", "query_category": "conceptual_query"}
+{"query_id": "gold_014", "query": "Separation of judiciary from the executive branch in public administration", "query_category": "conceptual_query"}
+{"query_id": "gold_015", "query": "Power of the President of India to grant pardons, reprieves, respites or remissions of punishment", "query_category": "conceptual_query"}
+{"query_id": "gold_016", "query": "What constitutes the Golden Triangle doctrine of Fundamental Rights in the Indian Constitution?", "query_category": "multi_article_query"}
+{"query_id": "gold_017", "query": "Compare general equality before law under Article 14 with prohibition of discrimination under Article 15", "query_category": "multi_article_query"}
+{"query_id": "gold_018", "query": "Compare National Emergency under Article 352 with failure of constitutional machinery in States under Article 356", "query_category": "multi_article_query"}
+{"query_id": "gold_019", "query": "Provisions protecting citizens against human trafficking, begar, and hazardous child employment", "query_category": "multi_article_query"}
+{"query_id": "gold_020", "query": "What is the procedure and power of Parliament to amend the Constitution of India under Article 368?", "query_category": "multi_article_query"}
+{"query_id": "gold_021", "query": "Can the Supreme Court issue writs against High Courts under Article 32 as opposed to Article 226 powers?", "query_category": "hard_negative"}
+{"query_id": "gold_022", "query": "Does freedom of speech under Article 19 include absolute right to provoke violence without reasonable restrictions?", "query_category": "hard_negative"}
+{"query_id": "gold_023", "query": "Does imposing President's Rule under Article 356 automatically extinguish personal liberty under Article 21?", "query_category": "hard_negative"}
+{"query_id": "gold_024", "query": "Directive principle regarding Uniform Civil Code for all citizens across India", "query_category": "hard_negative"}
+{"query_id": "gold_025", "query": "Does Article 1 allow individual Indian States to secede or declare sovereignty away from Bharat?", "query_category": "hard_negative"}

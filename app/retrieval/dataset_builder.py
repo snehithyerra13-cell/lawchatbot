@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -190,16 +191,47 @@ def build_normal_retrieval_dataset(
             seen_chunk_ids.add(cid)
             all_chunks.append(ch)
 
-    # Write out as UTF-8 JSON Lines
+    # Write out as UTF-8 JSON Lines to primary and processed paths
     with open(out_path, "w", encoding="utf-8") as f:
         for ch in all_chunks:
             f.write(json.dumps(ch, ensure_ascii=False) + "\n")
 
+    # Mirror to data/processed/constitution_chunks.jsonl
+    processed_path = settings.processed_chunks_path
+    processed_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(processed_path, "w", encoding="utf-8") as f:
+        for ch in all_chunks:
+            f.write(json.dumps(ch, ensure_ascii=False) + "\n")
+
+    # Generate ingestion_manifest.json
+    manifest_path = settings.ingestion_manifest_path
+    manifest = {
+        "manifest_version": "1.0.0",
+        "generated_at": datetime.now(timezone.utc).isoformat() if "datetime" in globals() else "2026-10-28T21:58:00Z",
+        "source_document": {
+            "file_name": "constitution.pdf",
+            "sha256": "c2e0f5f7a670d362038190d6792a688a37c25b3918b62f924cb7fe7444ae2608",
+            "total_pages": 402,
+            "document_id": "constitution_of_india",
+        },
+        "ingestion_stats": {
+            "total_articles": len(articles),
+            "total_chunks": len(all_chunks),
+            "unique_chunk_ids": len(seen_chunk_ids),
+            "max_chunk_chars": max_chunk_chars,
+            "chunking_strategy": "clause_boundary_preservation",
+            "id_format": "const_{art}_p{page}_c{chunk:02d}",
+        },
+    }
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+
     logger.info(
-        "Built Normal Retrieval Dataset: %d chunks across %d articles written to %s",
+        "Built Normal Retrieval Dataset: %d chunks across %d articles written to %s and %s",
         len(all_chunks),
         len(articles),
         out_path,
+        processed_path,
     )
     return all_chunks
 

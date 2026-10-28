@@ -1,0 +1,38 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.8, pytest-9.1.1, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Lenovo\OneDrive\Desktop\lawchatbot
+plugins: anyio-4.15.1, langsmith-0.14.12
+collecting ... collected 29 items
+
+tests/test_ingestion.py::test_source_pdf_and_manifest PASSED             [  3%]
+tests/test_ingestion.py::test_processed_chunks_schema_and_stable_ids PASSED [  6%]
+tests/test_reranker.py::test_reranker_exact_article_boost PASSED         [ 10%]
+tests/test_reranker.py::test_reranker_empty_and_single_candidate PASSED  [ 13%]
+tests/test_reranker.py::test_reranker_reordering_candidate_list PASSED   [ 17%]
+tests/test_citations.py::test_citation_validation_all_supported PASSED   [ 20%]
+tests/test_citations.py::test_citation_validation_detects_unsupported_claim PASSED [ 24%]
+tests/test_citations.py::test_end_to_end_citation_grounding PASSED       [ 27%]
+tests/test_abstention.py::test_abstention_on_foreign_constitution PASSED [ 31%]
+tests/test_abstention.py::test_abstention_on_nonexistent_article PASSED  [ 34%]
+tests/test_abstention.py::test_abstention_on_current_living_officeholders PASSED [ 37%]
+tests/test_abstention.py::test_no_false_positive_abstention_on_valid_queries PASSED [ 41%]
+tests/test_latency.py::test_normal_rag_latency_bounded PASSED            [ 44%]
+tests/test_latency.py::test_advanced_rag_stage_breakdown PASSED          [ 48%]
+tests/test_regression.py::test_auth0_regression PASSED                   [ 51%]
+tests/test_regression.py::test_mem0_regression PASSED                    [ 55%]
+tests/test_regression.py::test_checkpointer_and_chat_turn_regression PASSED [ 58%]
+tests/test_rag_evaluation.py::test_normal_retrieval_dataset_exists_and_valid PASSED [ 62%]
+tests/test_rag_evaluation.py::test_normal_retrieval_dataset_record_schema PASSED [ 65%]
+tests/test_rag_evaluation.py::test_golden_evaluation_dataset_exists_and_valid PASSED [ 68%]
+tests/test_rag_evaluation.py::test_golden_dataset_categories_and_graded_scale PASSED [ 72%]
+tests/test_rag_evaluation.py::test_metric_compute_dcg_at_k PASSED        [ 75%]
+tests/test_rag_evaluation.py::test_metric_compute_ndcg_at_k PASSED       [ 79%]
+tests/test_rag_evaluation.py::test_metric_compute_mrr PASSED             [ 82%]
+tests/test_rag_evaluation.py::test_metric_compute_recall_at_k PASSED     [ 86%]
+tests/test_rag_evaluation.py::test_metric_compute_source_hit PASSED      [ 89%]
+tests/test_rag_evaluation.py::test_knowledge_base_loads_normal_dataset_chunks PASSED [ 93%]
+tests/test_rag_evaluation.py::test_knowledge_base_search_returns_chunk_provenance PASSED [ 96%]
+tests/test_rag_evaluation.py::test_production_code_strictly_isolated_from_golden_evaluation_data PASSED [100%]
+
+======================== 29 passed in 74.06s (0:01:14) ========================

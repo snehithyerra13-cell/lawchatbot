@@ -432,17 +432,126 @@ GOLDEN_EVALUATION_RECORDS: List[Dict[str, Any]] = [
 def build_golden_evaluation_dataset(
     output_path: Optional[Path] = None,
 ) -> List[Dict[str, Any]]:
-    """Write the verified golden evaluation dataset to disk as UTF-8 JSON Lines."""
+    """Write the verified golden evaluation dataset to disk as UTF-8 JSON Lines,
+    including train/val/test splits, answer gold, and normal evaluation queries.
+    """
     settings = get_settings()
     settings.ensure_directories()
     out_path = Path(output_path or settings.golden_evaluation_dataset_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # 1. Primary golden evaluation file (for test_rag_evaluation compatibility)
     with open(out_path, "w", encoding="utf-8") as f:
         for rec in GOLDEN_EVALUATION_RECORDS:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
-    logger.info("Wrote %d golden evaluation records to %s", len(GOLDEN_EVALUATION_RECORDS), out_path)
+    # 2. Mirror to data/evaluation/golden/retrieval_gold.jsonl
+    retrieval_gold_path = settings.golden_eval_dir / "retrieval_gold.jsonl"
+    with open(retrieval_gold_path, "w", encoding="utf-8") as f:
+        for rec in GOLDEN_EVALUATION_RECORDS:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    # 3. Deterministic Splits (by Query Families to prevent data leakage)
+    train_ids = {"gold_001", "gold_002", "gold_004", "gold_006", "gold_007", "gold_009", "gold_011", "gold_012", "gold_014", "gold_017", "gold_019", "gold_022"}
+    val_ids = {"gold_005", "gold_010", "gold_015", "gold_018", "gold_024"}
+    test_ids = {"gold_003", "gold_008", "gold_013", "gold_016", "gold_020", "gold_021", "gold_023", "gold_025"}
+
+    train_recs = [r for r in GOLDEN_EVALUATION_RECORDS if r["query_id"] in train_ids]
+    val_recs = [r for r in GOLDEN_EVALUATION_RECORDS if r["query_id"] in val_ids]
+    test_recs = [r for r in GOLDEN_EVALUATION_RECORDS if r["query_id"] in test_ids]
+
+    train_path = settings.golden_eval_dir / "reranker_train.jsonl"
+    with open(train_path, "w", encoding="utf-8") as f:
+        for rec in train_recs:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    val_path = settings.golden_eval_dir / "reranker_validation.jsonl"
+    with open(val_path, "w", encoding="utf-8") as f:
+        for rec in val_recs:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    test_path = settings.golden_eval_dir / "reranker_test.jsonl"
+    with open(test_path, "w", encoding="utf-8") as f:
+        for rec in test_recs:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    # 4. Answer Gold dataset with citations and unanswerable queries
+    answer_gold_records = []
+    for r in GOLDEN_EVALUATION_RECORDS:
+        answer_gold_records.append({
+            "query_id": r["query_id"],
+            "query": r["query"],
+            "is_answerable": True,
+            "expected_abstention": False,
+            "expected_articles": r["expected_article_numbers"],
+            "expected_sources": r["expected_source_ids"],
+            "relevant_chunk_ids": r["relevant_chunk_ids"],
+            "category": r["query_category"],
+        })
+
+    # Add unanswerable / abstention test queries
+    unanswerable_cases = [
+        {
+            "query_id": "gold_unans_001",
+            "query": "What is the procedure for amending the United States Constitution under Article 5?",
+            "is_answerable": False,
+            "expected_abstention": True,
+            "expected_articles": [],
+            "expected_sources": [],
+            "relevant_chunk_ids": [],
+            "category": "unanswerable_out_of_domain",
+        },
+        {
+            "query_id": "gold_unans_002",
+            "query": "Who is the Chief Justice of India in 2026?",
+            "is_answerable": False,
+            "expected_abstention": True,
+            "expected_articles": ["124"],
+            "expected_sources": ["const_art_124"],
+            "relevant_chunk_ids": [],
+            "category": "unanswerable_current_affairs",
+        },
+        {
+            "query_id": "gold_unans_003",
+            "query": "What does Article 500 of the Constitution of India state regarding taxation?",
+            "is_answerable": False,
+            "expected_abstention": True,
+            "expected_articles": [],
+            "expected_sources": [],
+            "relevant_chunk_ids": [],
+            "category": "unanswerable_nonexistent_article",
+        },
+    ]
+    answer_gold_records.extend(unanswerable_cases)
+
+    answer_gold_path = settings.golden_eval_dir / "answer_gold.jsonl"
+    with open(answer_gold_path, "w", encoding="utf-8") as f:
+        for rec in answer_gold_records:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    # 5. Normal evaluation queries (stripped of relevance labels to avoid data leakage)
+    normal_eval_queries = [
+        {
+            "query_id": r["query_id"],
+            "query": r["query"],
+            "query_category": r["query_category"],
+        }
+        for r in GOLDEN_EVALUATION_RECORDS
+    ]
+    normal_eval_path = settings.normal_eval_dir / "evaluation_queries.jsonl"
+    with open(normal_eval_path, "w", encoding="utf-8") as f:
+        for rec in normal_eval_queries:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    logger.info(
+        "Wrote golden evaluation suite: %d total, %d train, %d val, %d test, %d answers to %s",
+        len(GOLDEN_EVALUATION_RECORDS),
+        len(train_recs),
+        len(val_recs),
+        len(test_recs),
+        len(answer_gold_records),
+        settings.golden_eval_dir,
+    )
     return GOLDEN_EVALUATION_RECORDS
 
 

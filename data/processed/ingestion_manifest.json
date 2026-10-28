@@ -1,0 +1,18 @@
+{
+  "manifest_version": "1.0.0",
+  "generated_at": "2026-10-28T16:30:14.458054+00:00",
+  "source_document": {
+    "file_name": "constitution.pdf",
+    "sha256": "c2e0f5f7a670d362038190d6792a688a37c25b3918b62f924cb7fe7444ae2608",
+    "total_pages": 402,
+    "document_id": "constitution_of_india"
+  },
+  "ingestion_stats": {
+    "total_articles": 320,
+    "total_chunks": 440,
+    "unique_chunk_ids": 440,
+    "max_chunk_chars": 1400,
+    "chunking_strategy": "clause_boundary_preservation",
+    "id_format": "const_{art}_p{page}_c{chunk:02d}"
+  }
+}
