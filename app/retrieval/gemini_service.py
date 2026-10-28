@@ -129,68 +129,68 @@ def format_user_friendly_error(diag: GeminiDiagnosticResult, article_str: str = 
     art_clause = f" for {article_str}" if article_str else ""
     if diag.error_type == "missing_key":
         return (
-            "⚙️ **Gemini AI Synthesis Not Configured**\n\n"
+            "**Gemini AI Synthesis Not Configured**\n\n"
             "No Gemini API key is configured. Please provide a valid Gemini API key in the sidebar under "
-            "**🔑 Gemini API Settings** or set `GEMINI_API_KEY` in `.env`.\n\n"
-            "🏛️ *The deterministic rule-based answer remains 100% verified against your local Constitution PDF.*"
+            "**Gemini API Settings** or set `GEMINI_API_KEY` in `.env`.\n\n"
+            "*The deterministic rule-based answer remains 100% verified against your local Constitution PDF.*"
         )
     elif diag.error_type == "quota_exceeded":
         return (
-            f"⚠️ **Gemini AI Quota / Rate Limit Exceeded** (HTTP 429{art_clause})\n\n"
+            f"**Gemini AI Quota / Rate Limit Exceeded** (HTTP 429{art_clause})\n\n"
             f"Google Gemini reported that current project quota was exhausted for model `{diag.model_used or 'gemini'}`: "
             f"_{diag.provider_message or 'You exceeded your current quota'}_.\n\n"
-            "💡 *Tip: Wait a few moments before rerunning, or configure a tier key with active quota in sidebar settings.*\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "*Tip: Wait a few moments before rerunning, or configure an upgraded tier API key in sidebar settings.*\n\n"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
     elif diag.error_type == "auth_invalid":
         return (
-            f"❌ **Gemini AI Authentication Failure** (HTTP 401{art_clause})\n\n"
+            f"**Gemini AI Authentication Failure** (HTTP 401{art_clause})\n\n"
             "The configured Gemini API key was rejected by Google Generative AI (HTTP 401 Unauthorized). "
-            "Please check and update your API key in the sidebar under **🔑 Gemini API Settings**.\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "Please check and update your API key in the sidebar under **Gemini API Settings**.\n\n"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
     elif diag.error_type == "permission_denied":
         return (
-            f"🔒 **Gemini AI Permission Denied** (HTTP 403{art_clause})\n\n"
+            f"**Gemini AI Permission Denied** (HTTP 403{art_clause})\n\n"
             f"Access to Google Gemini is forbidden: _{diag.provider_message or 'Permission denied'}_. "
             "Verify that Generative Language API is enabled in your Google Cloud Console project.\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
     elif diag.error_type == "not_found":
         return (
-            f"🔍 **Gemini AI Model Not Found** (HTTP 404{art_clause})\n\n"
+            f"**Gemini AI Model Not Found** (HTTP 404{art_clause})\n\n"
             f"The requested model `{diag.model_used}` is discontinued or unavailable. Models attempted: `{', '.join(diag.models_attempted)}`.\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
     elif diag.error_type == "bad_request":
         return (
-            f"⚠️ **Gemini AI Invalid Request** (HTTP 400{art_clause})\n\n"
+            f"**Gemini AI Invalid Request** (HTTP 400{art_clause})\n\n"
             f"The request payload was rejected: _{diag.provider_message or 'Bad request'}_.\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
     elif diag.error_type == "server_error":
         return (
-            f"☁️ **Google Gemini Service Unavailable** (HTTP {diag.status_code or 503}{art_clause})\n\n"
+            f"**Google Gemini Service Unavailable** (HTTP {diag.status_code or 503}{art_clause})\n\n"
             "Google's generative AI service is experiencing internal errors or high load. Bounded retries were attempted.\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
     elif diag.error_type == "timeout":
         return (
-            f"⏱️ **Gemini AI Request Timed Out** ({diag.duration_seconds:.1f}s elapsed{art_clause})\n\n"
+            f"**Gemini AI Request Timed Out** ({diag.duration_seconds:.1f}s elapsed{art_clause})\n\n"
             "The Google Gemini API did not respond within the allocated timeout window.\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
     elif diag.error_type == "network_error":
         return (
-            f"🌐 **Gemini AI Network Connection Error**{art_clause}\n\n"
+            f"**Gemini AI Network Connection Error**{art_clause}\n\n"
             f"Could not connect to Google Generative Language API: _{diag.provider_message or 'Network unreachable'}_.\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
     else:
         return (
-            f"⚠️ **Gemini AI Synthesis Unavailable**{art_clause}\n\n"
+            f"**Gemini AI Synthesis Unavailable**{art_clause}\n\n"
             f"_{diag.provider_message or 'An unexpected error occurred during synthesis'}_.\n\n"
-            "🏛️ *The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
+            "*The deterministic rule-based answer on the left remains 100% verified against your local Constitution PDF.*"
         )
 
 
