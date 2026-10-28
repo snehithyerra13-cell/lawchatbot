@@ -821,12 +821,16 @@ if "enable_human_review" not in st.session_state:
 if "pending_interrupt" not in st.session_state:
     st.session_state.pending_interrupt = None
 
+if "pending_resume" not in st.session_state:
+    st.session_state.pending_resume = None
+
 
 def switch_conversation(thread_id: str) -> None:
     """Switch active conversation thread and trigger rerun."""
     st.session_state.active_thread_id = thread_id
     st.session_state.delete_target_id = None
     st.session_state.pending_interrupt = None
+    st.session_state.pending_resume = None
     st.rerun()
 
 
@@ -838,6 +842,7 @@ def create_new_conversation(engine_mode: str = "both") -> None:
     st.session_state.active_thread_id = new_id
     st.session_state.delete_target_id = None
     st.session_state.pending_interrupt = None
+    st.session_state.pending_resume = None
     st.rerun()
 
 
@@ -1330,9 +1335,9 @@ def render_hitl_modal(paused_result: Dict[str, Any], active_thread: str, active_
     st.markdown(f"**Question Asked:** *\"{raw_q}\"*")
     if art_num:
         st.markdown(
-            f"""<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px; margin: 8px 0;">
-                <div style="color: #166534; font-weight: 700; font-size: 0.88rem;">🏛️ Constitutional Provision Identified</div>
-                <div style="color: #15803d; font-size: 0.84rem;"><strong>Article {art_num}</strong> — <em>{art_title}</em> ({part_name}, Page {page_start})</div>
+            f"""<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; margin: 8px 0;">
+                <div style="color: #166534; font-weight: 700; font-size: 0.90rem;">🏛️ Constitutional Provision Identified</div>
+                <div style="color: #15803d; font-size: 0.85rem; margin-top: 2px;"><strong>Article {art_num}</strong> — <em>{art_title}</em> ({part_name}, Page {page_start})</div>
             </div>""",
             unsafe_allow_html=True,
         )
@@ -1341,77 +1346,45 @@ def render_hitl_modal(paused_result: Dict[str, Any], active_thread: str, active_
         cand_summary = ", ".join([f"Art. {c.get('article_number')}" for c in cand_list[:5]])
         st.caption(f"📚 {len(cand_list)} candidate provisions found in Constitution database: {cand_summary}")
 
-    st.markdown("##### 🔍 Human Decision: RAG Second-Stage Ranking")
-    hitl_rerank_choice = st.radio(
-        "Select ranking strategy:",
-        [
-            "🔄 Apply Gemini Semantic Reranking (AI Cross-Scoring)",
-            "⚡ Direct Retrieval (Without Reranking)",
-        ],
-        index=0,
-        key="hitl_modal_rerank_radio",
-        help="Decide whether to score & reorder candidate articles using Gemini AI semantic ranking.",
-    )
-    selected_rerank_val = "rerank" if "Apply Gemini" in hitl_rerank_choice else "no_rerank"
+    st.markdown("##### ⚖️ Human Decision: RAG Ranking vs Direct Retrieval")
+    st.caption("Click your decision below. The pop-up will automatically close and generate your answer:")
 
-    st.markdown("##### 🚀 Choose Consultation Engine to Answer:")
-    col_d1, col_d2, col_d3, col_d4 = st.columns([1.1, 1.1, 1.1, 0.7])
-    with col_d1:
-        if st.button("✨ With Context (Gemini)", key="btn_hitl_gemini", use_container_width=True, type="primary"):
-            with st.spinner("Synthesizing answer with context..."):
-                resume_constitution_chat(
-                    active_thread,
-                    checkpointer=checkpointer,
-                    store=global_store,
-                    selected_engine="gemini",
-                    rerank_choice=selected_rerank_val,
-                )
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("🔄 Apply Gemini AI Reranking", key="btn_hitl_apply_rerank", use_container_width=True, type="primary"):
+            st.session_state.pending_resume = {
+                "thread_id": active_thread,
+                "engine": active_engine_mode,
+                "rerank": "rerank",
+            }
             st.session_state.pending_interrupt = None
-            st.session_state.just_streamed_thread = active_thread
-            st.session_state.just_streamed_choice = "gemini"
-            conv_db.update_conversation(active_thread, engine_mode="gemini")
-            st.toast("Answer generated with Gemini (With Context)!", icon="✨")
             st.rerun()
+        st.caption("🤖 Score & reorder candidate articles using Gemini AI semantic cross-scoring.")
 
-    with col_d2:
-        if st.button("📜 Without Context (PDF)", key="btn_hitl_rule", use_container_width=True):
-            with st.spinner("Retrieving verbatim PDF text..."):
-                resume_constitution_chat(
-                    active_thread,
-                    checkpointer=checkpointer,
-                    store=global_store,
-                    selected_engine="rule_based",
-                    rerank_choice=selected_rerank_val,
-                )
+    with col_btn2:
+        if st.button("⚡ Direct Retrieval (Do Not Rank)", key="btn_hitl_no_rerank", use_container_width=True):
+            st.session_state.pending_resume = {
+                "thread_id": active_thread,
+                "engine": active_engine_mode,
+                "rerank": "no_rerank",
+            }
             st.session_state.pending_interrupt = None
-            st.session_state.just_streamed_thread = active_thread
-            st.session_state.just_streamed_choice = "rule_based"
-            conv_db.update_conversation(active_thread, engine_mode="rule_based")
-            st.toast("Retrieved verbatim PDF (Without Context)!", icon="📜")
             st.rerun()
+        st.caption("📄 Fast direct database retrieval directly from local Constitution PDF.")
 
-    with col_d3:
-        if st.button("⚖️ Dual View (Both)", key="btn_hitl_both", use_container_width=True):
-            with st.spinner("Synthesizing dual view..."):
-                resume_constitution_chat(
-                    active_thread,
-                    checkpointer=checkpointer,
-                    store=global_store,
-                    selected_engine="both",
-                    rerank_choice=selected_rerank_val,
-                )
-            st.session_state.pending_interrupt = None
-            st.session_state.just_streamed_thread = active_thread
-            st.session_state.just_streamed_choice = "both"
-            conv_db.update_conversation(active_thread, engine_mode="both")
-            st.toast("Dual view generated!", icon="⚖️")
-            st.rerun()
-
-    with col_d4:
+    st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+    col_foot1, col_foot2 = st.columns([0.7, 0.3])
+    with col_foot1:
+        mode_text = (
+            "✨ With Context (Gemini)" if active_engine_mode == "gemini"
+            else ("📜 Without Context (PDF)" if active_engine_mode == "rule_based" else "⚖️ Dual View (Both)")
+        )
+        st.caption(f"Target Consultation Engine: **{mode_text}**")
+    with col_foot2:
         if st.button("❌ Discard", key="btn_hitl_discard", use_container_width=True):
             discard_thread_interrupted_turn(active_thread)
             st.session_state.pending_interrupt = None
-            st.toast("Turn discarded.", icon="❌")
+            st.session_state.pending_resume = None
             st.rerun()
 
 
@@ -1487,6 +1460,30 @@ with col_mode_bar2:
         conv_db.update_conversation(active_thread, engine_mode=mapped_mode)
         active_engine_mode = mapped_mode
         st.toast(f"Consultation mode updated to {selected_mode_label}!", icon="🎯")
+        st.rerun()
+
+# Handle Human-in-the-Loop decision execution (automatically closes modal & runs in chat)
+if st.session_state.get("pending_resume"):
+    resume_data = st.session_state.pop("pending_resume")
+    if resume_data.get("thread_id") == active_thread:
+        res_engine = resume_data.get("engine", active_engine_mode)
+        res_rerank = resume_data.get("rerank", "rerank")
+        with st.chat_message("assistant", avatar="⚖️"):
+            with st.spinner("Applying ranking decision and synthesizing constitutional response..."):
+                res_output = resume_constitution_chat(
+                    active_thread,
+                    checkpointer=checkpointer,
+                    store=global_store,
+                    selected_engine=res_engine,
+                    rerank_choice=res_rerank,
+                )
+        conv_db.update_conversation(active_thread, engine_mode=res_engine)
+        st.session_state.just_streamed_thread = active_thread
+        st.session_state.just_streamed_choice = res_engine
+        st.toast(
+            "Gemini AI reranking applied!" if res_rerank == "rerank" else "Direct retrieval applied!",
+            icon="✅",
+        )
         st.rerun()
 
 # Trigger Pop-up Modal Dialog if an interrupt is pending
