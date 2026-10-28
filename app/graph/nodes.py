@@ -964,6 +964,10 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
                 "Feel free to ask about any article, right, duty, or comparison!"
             )
             gemini_diagnostic = {"success": True, "status_code": 200, "note": "greeting"}
+        elif state.get("selected_engine") == "rule_based":
+            # Fast bypass: When Rule-Based engine is selected, skip Gemini LLM network call completely for sub-second execution!
+            gemini_ans = None
+            gemini_diagnostic = {"success": True, "status_code": 200, "note": "rule_based_engine_selected"}
         else:
             try:
                 # Query Mem0 for user context and persistent preferences
@@ -1086,24 +1090,27 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
             except Exception as ex:
                 logger.debug("Store write skipped: %s", ex)
 
-    # Mem0 Intelligent Memory Auto-Extraction
-    try:
-        from app.memory.mem0_service import get_mem0_service
+    # Mem0 Intelligent Memory Auto-Extraction (100% Background Non-Blocking Execution)
+    def _bg_save_mem0() -> None:
+        try:
+            from app.memory.mem0_service import get_mem0_service
+            user_id = state.get("user_id") or "default_user"
+            if state.get("intent") not in ["out_of_scope", "uncertain", "greeting"]:
+                mem0 = get_mem0_service()
+                mem0.extract_and_save_conversation_memory(
+                    user_id=user_id,
+                    question=state.get("raw_question") or state.get("question", ""),
+                    answer=rule_ans or gemini_ans or "",
+                    metadata={
+                        "article_number": state.get("article_number") or state.get("last_discussed_article"),
+                        "topic": state.get("topic"),
+                    },
+                )
+        except Exception as mem_err:
+            logger.debug("Mem0 auto-record skipped: %s", mem_err)
 
-        user_id = state.get("user_id") or "default_user"
-        if state.get("intent") not in ["out_of_scope", "uncertain", "greeting"]:
-            mem0 = get_mem0_service()
-            mem0.extract_and_save_conversation_memory(
-                user_id=user_id,
-                question=state.get("raw_question") or state.get("question", ""),
-                answer=rule_ans or gemini_ans or "",
-                metadata={
-                    "article_number": state.get("article_number") or state.get("last_discussed_article"),
-                    "topic": state.get("topic"),
-                },
-            )
-    except Exception as mem_err:
-        logger.debug("Mem0 auto-record skipped: %s", mem_err)
+    import threading
+    threading.Thread(target=_bg_save_mem0, daemon=True).start()
 
     return {
         "messages": [ai_msg],

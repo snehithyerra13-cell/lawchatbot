@@ -154,8 +154,8 @@ def stream_text_word_by_word(
     import re
     tokens = re.findall(r"\S+|\n", text)
     if delay is None:
-        # Dynamic pacing: ~2.5 to 3.5s total typing duration regardless of text length
-        delay = max(0.012, min(0.035, 3.0 / max(len(tokens), 1)))
+        # High-speed dynamic pacing: snappy ~0.45s typing duration across words
+        delay = max(0.002, min(0.008, 0.45 / max(len(tokens), 1)))
     for idx, token in enumerate(tokens):
         if token == "\n":
             yield "\n"
@@ -521,10 +521,10 @@ def execute_query_chatgpt_style(
             """,
             unsafe_allow_html=True,
         )
-        time.sleep(0.06)
+        time.sleep(0.015)
 
     # Ensure worker has fully finished and final result is captured
-    worker_thread.join(timeout=1.0)
+    worker_thread.join(timeout=0.1)
     while not event_queue.empty():
         try:
             item = event_queue.get_nowait()

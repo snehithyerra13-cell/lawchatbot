@@ -22,14 +22,13 @@ logger = logging.getLogger(__name__)
 
 FALLBACK_MODELS = [
     "gemini-flash-lite-latest",
-    "gemini-3.8-flash",
-    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
     "gemini-flash-latest",
-    "gemini-pro-latest",
 ]
 
 _HTTP_SESSION = None
 _LAST_DIAGNOSTIC: Optional[GeminiDiagnosticResult] = None
+_GEMINI_SYNTHESIS_CACHE: Dict[str, Any] = {}
 
 
 @dataclass
@@ -336,8 +335,8 @@ def execute_gemini_request_with_diagnostics(
     prompt: str,
     api_key: Optional[str] = None,
     article_label: str = "",
-    timeout: int = 25,
-    max_retries_per_model: int = 1,
+    timeout: int = 8,
+    max_retries_per_model: int = 0,
     models: Optional[List[str]] = None,
 ) -> GeminiDiagnosticResult:
     """Execute Gemini generation with safe structured diagnostics, bounded retries, and truthful error categorization."""
@@ -520,6 +519,12 @@ def generate_gemini_with_diagnostics(
     user_memories: Optional[List[Dict[str, Any]]] = None,
 ) -> GeminiDiagnosticResult:
     """Generate Gemini response and return full structured diagnostics."""
+    norm_q = re.sub(r"[^\w\s]", "", question.lower().strip())
+    if norm_q in _GEMINI_SYNTHESIS_CACHE:
+        cached_res = _GEMINI_SYNTHESIS_CACHE[norm_q]
+        logger.info("Serving Gemini synthesis from in-memory fast cache for: '%s'", question[:40])
+        return cached_res
+
     art_str = f"Article {retrieved_docs[0]['article_number']}" if retrieved_docs and retrieved_docs[0].get("article_number") else ""
     history_str = format_conversation_history(conversation_history)
     evidence_str = format_retrieved_evidence(retrieved_docs, comparison_data=comparison_data, topic=topic)
@@ -559,11 +564,14 @@ def generate_gemini_with_diagnostics(
         f"Provide your comprehensive, accessible response based on the above evidence and context. Jump directly into the answer without introductory phrases."
     )
 
-    return execute_gemini_request_with_diagnostics(
+    res = execute_gemini_request_with_diagnostics(
         prompt=prompt,
         api_key=api_key,
         article_label=art_str,
     )
+    if res.success and res.text:
+        _GEMINI_SYNTHESIS_CACHE[norm_q] = res
+    return res
 
 
 def generate_gemini_constitutional_response(
