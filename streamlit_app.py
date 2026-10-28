@@ -345,23 +345,17 @@ def render_engine_footer(engine_type: str = "pdf") -> None:
     """Render a light font indicator directly below the answer (e.g. 'pdf answer' or 'ai generated')."""
     if engine_type == "pdf":
         st.markdown(
-            """<div style="color: #9aa0a6; font-size: 0.77rem; font-style: italic; margin-top: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">
-                <span>📄 pdf answer</span>
-            </div>""",
+            '<div style="color: #9aa0a6; font-size: 0.77rem; font-style: italic; margin-top: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;"><span>📄 pdf answer</span></div>',
             unsafe_allow_html=True,
         )
     elif engine_type == "error":
         st.markdown(
-            """<div style="color: #b45309; font-size: 0.77rem; font-style: italic; margin-top: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">
-                <span>⚠️ ai synthesis unavailable • verified rule-based pdf fallback</span>
-            </div>""",
+            '<div style="color: #b45309; font-size: 0.77rem; font-style: italic; margin-top: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;"><span>⚠️ ai synthesis unavailable • verified rule-based pdf fallback</span></div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            """<div style="color: #9aa0a6; font-size: 0.77rem; font-style: italic; margin-top: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">
-                <span>✨ ai generated</span>
-            </div>""",
+            '<div style="color: #9aa0a6; font-size: 0.77rem; font-style: italic; margin-top: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;"><span>✨ ai generated</span></div>',
             unsafe_allow_html=True,
         )
 
@@ -1165,36 +1159,11 @@ with st.sidebar:
         help="When enabled, LangGraph pauses execution before finalization to ask permission. Kept OFF by default so answers generate directly without asking below again.",
     )
 
-    # Feature: RAG Retrieval & Reranker Strategy (with Human-in-the-Loop decision)
-    with st.expander("🎯 RAG Retrieval & Reranker Strategy", expanded=True):
-        st.markdown("**Second-Stage Retrieval Reranker**")
-        rerank_options = [
-            "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)",
-            "🔄 Always Rerank (Gemini AI Semantic Scoring)",
-            "⚡ Direct Retrieval (No Reranking)",
-        ]
-        if "rag_rerank_choice" not in st.session_state:
-            st.session_state.rag_rerank_choice = "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)"
-
-        current_rerank_idx = (
-            rerank_options.index(st.session_state.rag_rerank_choice)
-            if st.session_state.rag_rerank_choice in rerank_options
-            else 0
-        )
-        chosen_rerank = st.radio(
-            "Reranking Mode:",
-            rerank_options,
-            index=current_rerank_idx,
-            help="Choose whether candidate constitutional articles are reranked via Gemini or whether human in the loop decides per turn.",
-        )
-        st.session_state.rag_rerank_choice = chosen_rerank
-
-        if chosen_rerank == "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)":
-            st.caption("ℹ️ Execution will pause before answering so you can inspect candidate articles and decide whether to rerank.")
-        elif chosen_rerank == "🔄 Always Rerank (Gemini AI Semantic Scoring)":
-            st.caption("ℹ️ Candidate articles from database are automatically scored (0-100) and reordered by Gemini.")
-        else:
-            st.caption("ℹ️ Pure first-stage direct database retrieval without second-stage reranking.")
+    # Feature: RAG Retrieval & Reranker Strategy Info
+    with st.expander("🎯 RAG Pipeline Status", expanded=False):
+        rag_mode_display = st.session_state.get("rag_pipeline_mode", "advanced").capitalize()
+        st.markdown(f"**Active Pipeline:** `{rag_mode_display} RAG`")
+        st.caption("Select your RAG architecture from the main bar above: Advanced RAG (Hybrid RRF + Cross-Rerank), Normal RAG (Vector Baseline), or Compare Pipelines.")
 
     with st.expander("🔑 Gemini API Settings", expanded=False):
         api_key_val = st.text_input(
@@ -1515,8 +1484,8 @@ with col_rag_bar2:
     else:
         st.session_state.rag_pipeline_mode = "compare"
 
-# Trigger Pop-up Modal Dialog if an interrupt is pending
-if st.session_state.pending_interrupt:
+# Trigger Pop-up Modal Dialog only if an interrupt is pending and developer review is enabled
+if st.session_state.pending_interrupt and st.session_state.get("enable_human_review", False):
     render_hitl_modal(
         st.session_state.pending_interrupt.get("result", {}),
         active_thread,
@@ -1730,7 +1699,7 @@ if st.session_state.get("pending_resume"):
         st.rerun()
 
 # --- User Input Handling with Event Streaming & Word-by-Word Output ---
-chat_disabled = bool(st.session_state.pending_interrupt)
+chat_disabled = bool(st.session_state.pending_interrupt and st.session_state.get("enable_human_review", False))
 chat_placeholder = (
     "Please grant permission on the pending prompt above..."
     if chat_disabled
@@ -1757,10 +1726,15 @@ if active_query and active_query.strip():
         st.markdown(f"**{clean_query}**")
 
     # Execute LangGraph turn with ChatGPT-style dynamic step progression
-    chosen_rerank_pref = st.session_state.get("rag_rerank_choice", "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)")
-    is_hitl_rerank = (chosen_rerank_pref == "🧑‍⚖️ Human-in-the-Loop (Ask me to Rerank or Not)")
-    eff_enable_interrupt = bool(st.session_state.enable_human_review or is_hitl_rerank)
-    eff_rerank_mode = "hitl_decide" if is_hitl_rerank else ("rerank" if "Always Rerank" in chosen_rerank_pref else "no_rerank")
+    rag_mode = st.session_state.get("rag_pipeline_mode", "advanced")
+    if rag_mode == "advanced":
+        eff_rerank_mode = "rerank"
+    elif rag_mode == "normal":
+        eff_rerank_mode = "no_rerank"
+    else:
+        eff_rerank_mode = "compare"
+
+    eff_enable_interrupt = bool(st.session_state.get("enable_human_review", False))
 
     with st.chat_message("assistant", avatar="⚖️"):
         result = execute_query_chatgpt_style(
