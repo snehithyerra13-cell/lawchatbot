@@ -66,14 +66,18 @@ def sub_execute_pdf_retrieval(state: RetrievalSubState) -> Dict[str, Any]:
             retrieved_docs = [comp_data["article_1"], comp_data["article_2"]]
             sources = [
                 {
-                    "source_pdf": comp_data["article_1"]["source_pdf"],
-                    "page": comp_data["article_1"]["page_start"],
-                    "article": comp_data["article_1"]["article_number"],
+                    "source_pdf": comp_data["article_1"].get("source_pdf", "constitution.pdf"),
+                    "page": comp_data["article_1"].get("page_start", "") or comp_data["article_1"].get("page_number", ""),
+                    "article": comp_data["article_1"].get("article_number", ""),
+                    "chunk_id": comp_data["article_1"].get("chunk_id", ""),
+                    "source_id": comp_data["article_1"].get("source_id", ""),
                 },
                 {
-                    "source_pdf": comp_data["article_2"]["source_pdf"],
-                    "page": comp_data["article_2"]["page_start"],
-                    "article": comp_data["article_2"]["article_number"],
+                    "source_pdf": comp_data["article_2"].get("source_pdf", "constitution.pdf"),
+                    "page": comp_data["article_2"].get("page_start", "") or comp_data["article_2"].get("page_number", ""),
+                    "article": comp_data["article_2"].get("article_number", ""),
+                    "chunk_id": comp_data["article_2"].get("chunk_id", ""),
+                    "source_id": comp_data["article_2"].get("source_id", ""),
                 },
             ]
             notes.append(
@@ -93,9 +97,11 @@ def sub_execute_pdf_retrieval(state: RetrievalSubState) -> Dict[str, Any]:
             retrieved_docs = [doc]
             sources = [
                 {
-                    "source_pdf": doc["source_pdf"],
-                    "page": doc["page_start"],
-                    "article": doc["article_number"],
+                    "source_pdf": doc.get("source_pdf", "constitution.pdf"),
+                    "page": doc.get("page_start", "") or doc.get("page_number", ""),
+                    "article": doc.get("article_number", ""),
+                    "chunk_id": doc.get("chunk_id", ""),
+                    "source_id": doc.get("source_id", ""),
                 }
             ]
             notes.append(f"Subgraph article lookup retrieved: Article {art_num}.")
@@ -113,9 +119,11 @@ def sub_execute_pdf_retrieval(state: RetrievalSubState) -> Dict[str, Any]:
         matched_topic = topic_data.get("topic_title", topic or "Constitutional Topic")
         sources = [
             {
-                "source_pdf": d["source_pdf"],
-                "page": d["page_start"],
-                "article": d["article_number"],
+                "source_pdf": d.get("source_pdf", "constitution.pdf"),
+                "page": d.get("page_start", "") or d.get("page_number", ""),
+                "article": d.get("article_number", ""),
+                "chunk_id": d.get("chunk_id", ""),
+                "source_id": d.get("source_id", ""),
             }
             for d in retrieved_docs[:3]
         ]
@@ -134,9 +142,11 @@ def sub_execute_pdf_retrieval(state: RetrievalSubState) -> Dict[str, Any]:
         retrieved_docs = search_results
         sources = [
             {
-                "source_pdf": d["source_pdf"],
-                "page": d["page_start"],
-                "article": d["article_number"],
+                "source_pdf": d.get("source_pdf", "constitution.pdf"),
+                "page": d.get("page_start", "") or d.get("page_number", ""),
+                "article": d.get("article_number", ""),
+                "chunk_id": d.get("chunk_id", ""),
+                "source_id": d.get("source_id", ""),
             }
             for d in search_results
         ]

@@ -133,9 +133,32 @@ class ConstitutionalKnowledgeBase:
         self.settings = settings or get_settings()
         self.articles_by_num: Dict[str, Dict[str, Any]] = {}
         self.articles_list: List[Dict[str, Any]] = []
+        self.chunks_list: List[Dict[str, Any]] = []
+        self.chunks_by_id: Dict[str, Dict[str, Any]] = {}
+        self.chunks_by_article: Dict[str, List[Dict[str, Any]]] = {}
         self.metadata: Dict[str, Any] = {}
         self.is_loaded: bool = False
         self.load()
+
+    def _format_chunk_for_retrieval(
+        self, chunk: Dict[str, Any], score: float = 0.0
+    ) -> Dict[str, Any]:
+        """Format a normal retrieval chunk into a unified searchable document."""
+        meta = chunk.get("metadata", {})
+        doc = dict(chunk)
+        doc["retrieval_score"] = round(float(score), 2)
+        doc["article_title"] = meta.get("article_title", "")
+        doc["part"] = meta.get("part", "PART III")
+        doc["part_title"] = meta.get("part_title", "")
+        doc["page_start"] = chunk.get("page_number", meta.get("page_start", 1))
+        doc["page_end"] = meta.get("page_end", doc["page_start"])
+        doc["constitutional_text"] = chunk.get("text", "")
+        doc["simple_explanation"] = meta.get("simple_explanation", "")
+        doc["keywords"] = meta.get("keywords", [])
+        doc["key_principles"] = meta.get("key_principles", [])
+        doc["source_pdf"] = meta.get("source_pdf", "constitution.pdf")
+        doc["source_hash"] = meta.get("source_hash", "")
+        return doc
 
     def load(self, force_rebuild: bool = False) -> bool:
         """Load articles into memory from cache or build from PDF."""
@@ -153,9 +176,34 @@ class ConstitutionalKnowledgeBase:
                     a["article_number"].upper(): a for a in self.articles_list
                 }
                 self.metadata = extracted[1]
+
+                # Load or initialize Dataset A (Normal Retrieval Dataset)
+                from app.retrieval.dataset_builder import load_normal_retrieval_dataset
+                self.chunks_list = load_normal_retrieval_dataset(
+                    self.settings.normal_retrieval_dataset_path, auto_build_if_missing=True
+                )
+                self.chunks_by_id = {c["chunk_id"]: c for c in self.chunks_list}
+                self.chunks_by_article = {}
+                for c in self.chunks_list:
+                    a_num = c.get("article_number", "").upper()
+                    if a_num not in self.chunks_by_article:
+                        self.chunks_by_article[a_num] = []
+                    self.chunks_by_article[a_num].append(c)
+
+                # Attach primary chunk provenance to article objects
+                for art_num, art in self.articles_by_num.items():
+                    c_list = self.chunks_by_article.get(art_num, [])
+                    if c_list:
+                        art["chunk_id"] = c_list[0]["chunk_id"]
+                        art["source_id"] = c_list[0]["source_id"]
+                        art["document_id"] = c_list[0].get("document_id", "constitution_of_india")
+                        art["content_hash"] = c_list[0].get("content_hash", "")
+
                 self.is_loaded = True
                 logger.info(
-                    "Loaded %d articles from cache", len(self.articles_list)
+                    "Loaded %d articles and %d chunks from cache",
+                    len(self.articles_list),
+                    len(self.chunks_list),
                 )
                 return True
 
@@ -193,14 +241,38 @@ class ConstitutionalKnowledgeBase:
         articles = parse_constitution_documents(pages_data, metadata)
         save_articles_json(articles, self.settings.articles_path)
 
+        # 5. Build Normal Retrieval Dataset (Dataset A)
+        from app.retrieval.dataset_builder import build_normal_retrieval_dataset
+        self.chunks_list = build_normal_retrieval_dataset(
+            source_articles_path=self.settings.articles_path,
+            output_path=self.settings.normal_retrieval_dataset_path,
+        )
+        self.chunks_by_id = {c["chunk_id"]: c for c in self.chunks_list}
+        self.chunks_by_article = {}
+        for c in self.chunks_list:
+            a_num = c.get("article_number", "").upper()
+            if a_num not in self.chunks_by_article:
+                self.chunks_by_article[a_num] = []
+            self.chunks_by_article[a_num].append(c)
+
         self.articles_list = articles
         self.articles_by_num = {
             a["article_number"].upper(): a for a in self.articles_list
         }
+        for art_num, art in self.articles_by_num.items():
+            c_list = self.chunks_by_article.get(art_num, [])
+            if c_list:
+                art["chunk_id"] = c_list[0]["chunk_id"]
+                art["source_id"] = c_list[0]["source_id"]
+                art["document_id"] = c_list[0].get("document_id", "constitution_of_india")
+                art["content_hash"] = c_list[0].get("content_hash", "")
+
         self.metadata = metadata
         self.is_loaded = True
         logger.info(
-            "Rebuild complete. %d articles indexed.", len(self.articles_list)
+            "Rebuild complete. %d articles and %d chunks indexed.",
+            len(self.articles_list),
+            len(self.chunks_list),
         )
         return True
 
@@ -209,6 +281,7 @@ class ConstitutionalKnowledgeBase:
         return {
             "is_loaded": self.is_loaded,
             "total_articles": len(self.articles_list),
+            "total_chunks": len(self.chunks_list),
             "source_pdf": self.metadata.get(
                 "source_file_name", self.settings.source_pdf_path.name
             ),
@@ -225,6 +298,13 @@ class ConstitutionalKnowledgeBase:
             ),
         }
 
+    def get_chunk(self, chunk_id: str) -> Optional[Dict[str, Any]]:
+        """Lookup a specific chunk directly by its stable chunk_id."""
+        c = self.chunks_by_id.get(chunk_id)
+        if c:
+            return self._format_chunk_for_retrieval(c, score=100.0)
+        return None
+
     def normalize_article_number(self, raw_input: str) -> Optional[str]:
         """Normalize various article reference strings into canonical key."""
         if not raw_input:
@@ -240,10 +320,13 @@ class ConstitutionalKnowledgeBase:
         return None
 
     def lookup_article(self, article_num: str) -> Optional[Dict[str, Any]]:
-        """Lookup an article directly by its canonical number."""
+        """Lookup an article directly by its canonical number, attaching chunk provenance."""
         canonical = self.normalize_article_number(article_num)
         if not canonical:
             return None
+        chunks = self.chunks_by_article.get(canonical, [])
+        if chunks:
+            return self._format_chunk_for_retrieval(chunks[0], score=100.0)
         return self.articles_by_num.get(canonical)
 
     def search_topic(self, query: str) -> Optional[Dict[str, Any]]:
@@ -271,7 +354,7 @@ class ConstitutionalKnowledgeBase:
             # Attach actual article records for key articles
             key_art_records = []
             for art_num in best_match.get("key_articles", []):
-                rec = self.articles_by_num.get(art_num.upper())
+                rec = self.lookup_article(art_num.upper()) or self.articles_by_num.get(art_num.upper())
                 if rec:
                     key_art_records.append(rec)
             return {
@@ -286,40 +369,49 @@ class ConstitutionalKnowledgeBase:
     def search(
         self, query: str, top_k: int = 5, min_score: float = 6.0
     ) -> List[Dict[str, Any]]:
-        """Search articles using deterministic multi-field scoring.
+        """Search normal retrieval dataset chunks using deterministic multi-field scoring.
 
-        No LLM or model-based embeddings used.
+        Searches Dataset A (data/rag/normal_retrieval_dataset.jsonl).
+        No LLM or external embeddings used for production Stage 1.
         """
         # 1. Direct article check first
         direct_art = self.normalize_article_number(query)
-        if direct_art and direct_art in self.articles_by_num:
+        if direct_art and direct_art in self.chunks_by_article:
+            chunks = self.chunks_by_article[direct_art]
+            return [self._format_chunk_for_retrieval(c, score=100.0) for c in chunks[:top_k]]
+        elif direct_art and direct_art in self.articles_by_num:
             return [self.articles_by_num[direct_art]]
 
         query_tokens = tokenize(query)
         if not query_tokens:
             return []
 
-        scored_articles: List[Tuple[float, Dict[str, Any]]] = []
-
+        scored_chunks: List[Tuple[float, Dict[str, Any]]] = []
         q_terms_counter = Counter(query_tokens)
+        q_lower = query.lower()
+        q_words = set(q_lower.split())
 
-        for art in self.articles_list:
+        corpus = self.chunks_list if self.chunks_list else self.articles_list
+
+        for item in corpus:
             score = 0.0
-            art_num = art["article_number"]
-            title = art["article_title"].lower()
-            text = art["constitutional_text"].lower()
-            explanation = art.get("simple_explanation", "").lower()
-            keywords = [k.lower() for k in art.get("keywords", [])]
+            art_num = item.get("article_number", "")
+            meta = item.get("metadata", {})
+            title = (meta.get("article_title") or item.get("article_title", "")).lower()
+            text = (item.get("text") or item.get("constitutional_text", "")).lower()
+            explanation = (meta.get("simple_explanation") or item.get("simple_explanation", "")).lower()
+            keywords = [k.lower() for k in (meta.get("keywords") or item.get("keywords", []))]
 
             # Exact article match in query
             if (
-                art_num.lower() in query.lower().split()
-                or f"article {art_num.lower()}" in query.lower()
+                art_num.lower() in q_words
+                or f"article {art_num.lower()}" in q_lower
+                or f"art. {art_num.lower()}" in q_lower
             ):
                 score += 50.0
 
             # Title exact phrase match
-            if title in query.lower():
+            if title and title in q_lower:
                 score += 25.0
 
             # Token overlap in title (weight = 10)
@@ -330,7 +422,7 @@ class ConstitutionalKnowledgeBase:
 
             # Keyword match (weight = 8)
             for kw in keywords:
-                if kw in query.lower():
+                if kw in q_lower:
                     score += 8.0
 
             # Token overlap in explanation (weight = 4)
@@ -347,10 +439,15 @@ class ConstitutionalKnowledgeBase:
                     score += 1.0 * (1.0 + math.log(text_tokens[q_term]))
 
             if score >= min_score:
-                scored_articles.append((score, art))
+                formatted = (
+                    self._format_chunk_for_retrieval(item, score)
+                    if "chunk_id" in item
+                    else item
+                )
+                scored_chunks.append((score, formatted))
 
-        scored_articles.sort(key=lambda x: x[0], reverse=True)
-        return [art for _, art in scored_articles[:top_k]]
+        scored_chunks.sort(key=lambda x: x[0], reverse=True)
+        return [doc for _, doc in scored_chunks[:top_k]]
 
     def compare_articles(
         self, art_1_num: str, art_2_num: str

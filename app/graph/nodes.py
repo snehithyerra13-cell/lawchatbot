@@ -666,8 +666,10 @@ def retrieve_constitution(state: ConstitutionState) -> Dict[str, Any]:
     sources = [
         {
             "source_pdf": d.get("source_pdf", "constitution.pdf"),
-            "page": d.get("page_start", ""),
+            "page": d.get("page_start", "") or d.get("page_number", ""),
             "article": d.get("article_number", ""),
+            "chunk_id": d.get("chunk_id", ""),
+            "source_id": d.get("source_id", ""),
         }
         for d in final_docs
     ] if final_docs else sub_output.get("sources", [])

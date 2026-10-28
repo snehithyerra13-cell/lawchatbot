@@ -48,6 +48,14 @@ class Settings:
     articles_path: Path = DATA_DIR / "articles.json"
     metadata_path: Path = DATA_DIR / "metadata.json"
 
+    # RAG Datasets & Evaluation Paths
+    rag_dir: Path = DATA_DIR / "rag"
+    normal_retrieval_dataset_path: Path = DATA_DIR / "rag" / "normal_retrieval_dataset.jsonl"
+    golden_evaluation_dataset_path: Path = (
+        PROJECT_ROOT / "tests" / "evaluation" / "golden_reranking_dataset.jsonl"
+    )
+    evaluation_reports_dir: Path = PROJECT_ROOT / "reports" / "rag"
+
     # Persistence Paths
     checkpoints_db_path: Path = DATA_DIR / "checkpoints.db"
     conversations_db_path: Path = DATA_DIR / "conversations.db"
@@ -92,6 +100,9 @@ class Settings:
     def ensure_directories(self) -> None:
         """Ensure all required project directories exist."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.rag_dir.mkdir(parents=True, exist_ok=True)
+        self.golden_evaluation_dataset_path.parent.mkdir(parents=True, exist_ok=True)
+        self.evaluation_reports_dir.mkdir(parents=True, exist_ok=True)
 
 
 _settings_instance: Settings | None = None
