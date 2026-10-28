@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional
 
 import streamlit as st
+import streamlit.components.v1 as components
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from app.graph.workflow import (
@@ -1317,6 +1318,21 @@ with st.sidebar:
 # MAIN INTERFACE & POP-UP DIALOGS
 # ==========================================
 
+def _instant_dismiss_dialog_js() -> None:
+    """Inject instant DOM hiding script so the modal vanishes in 0ms on click."""
+    components.html(
+        """<script>
+        try {
+            const pd = window.parent.document;
+            pd.querySelectorAll('[data-testid="stDialog"], [role="dialog"], [data-testid="stModal"]').forEach(el => { el.style.display = 'none'; });
+            pd.querySelectorAll('[data-testid="stDialogBackdrop"]').forEach(el => { el.style.display = 'none'; });
+        } catch(e) {}
+        </script>""",
+        height=0,
+        width=0,
+    )
+
+
 @st.dialog("🎯 Human-in-the-Loop: RAG Ranking Decision", width="large")
 def render_hitl_modal(paused_result: Dict[str, Any], active_thread: str, active_engine_mode: str) -> None:
     """Pop-up modal dialog for Human-in-the-Loop decision on ranking & engine approval."""
@@ -1354,6 +1370,7 @@ def render_hitl_modal(paused_result: Dict[str, Any], active_thread: str, active_
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
         if st.button("🔄 Apply Gemini AI Reranking", key="btn_hitl_apply_rerank", use_container_width=True, type="primary"):
+            _instant_dismiss_dialog_js()
             st.session_state.pending_resume = {
                 "thread_id": active_thread,
                 "engine": active_engine_mode,
@@ -1365,6 +1382,7 @@ def render_hitl_modal(paused_result: Dict[str, Any], active_thread: str, active_
 
     with col_btn2:
         if st.button("⚡ Direct Retrieval (Do Not Rank)", key="btn_hitl_no_rerank", use_container_width=True):
+            _instant_dismiss_dialog_js()
             st.session_state.pending_resume = {
                 "thread_id": active_thread,
                 "engine": active_engine_mode,
@@ -1384,6 +1402,7 @@ def render_hitl_modal(paused_result: Dict[str, Any], active_thread: str, active_
         st.caption(f"Target Consultation Engine: **{mode_text}**")
     with col_foot2:
         if st.button("❌ Discard", key="btn_hitl_discard", use_container_width=True):
+            _instant_dismiss_dialog_js()
             discard_thread_interrupted_turn(active_thread)
             st.session_state.pending_interrupt = None
             st.session_state.pending_resume = None
@@ -1462,30 +1481,6 @@ with col_mode_bar2:
         conv_db.update_conversation(active_thread, engine_mode=mapped_mode)
         active_engine_mode = mapped_mode
         st.toast(f"Consultation mode updated to {selected_mode_label}!", icon="🎯")
-        st.rerun()
-
-# Handle Human-in-the-Loop decision execution (automatically closes modal & runs in chat)
-if st.session_state.get("pending_resume"):
-    resume_data = st.session_state.pop("pending_resume")
-    if resume_data.get("thread_id") == active_thread:
-        res_engine = resume_data.get("engine", active_engine_mode)
-        res_rerank = resume_data.get("rerank", "rerank")
-        with st.chat_message("assistant", avatar="⚖️"):
-            with st.spinner("Applying ranking decision and synthesizing constitutional response..."):
-                res_output = resume_constitution_chat(
-                    active_thread,
-                    checkpointer=checkpointer,
-                    store=global_store,
-                    selected_engine=res_engine,
-                    rerank_choice=res_rerank,
-                )
-        conv_db.update_conversation(active_thread, engine_mode=res_engine)
-        st.session_state.just_streamed_thread = active_thread
-        st.session_state.just_streamed_choice = res_engine
-        st.toast(
-            "Gemini AI reranking applied!" if res_rerank == "rerank" else "Direct retrieval applied!",
-            icon="✅",
-        )
         st.rerun()
 
 # Trigger Pop-up Modal Dialog if an interrupt is pending
@@ -1702,6 +1697,30 @@ for msg_idx, msg in enumerate(thread_messages):
 
 if is_last_and_streaming:
     st.session_state.just_streamed_thread = None
+
+# Handle Human-in-the-Loop decision execution (runs in chat history container after modal closes)
+if st.session_state.get("pending_resume"):
+    resume_data = st.session_state.pop("pending_resume")
+    if resume_data.get("thread_id") == active_thread:
+        res_engine = resume_data.get("engine", active_engine_mode)
+        res_rerank = resume_data.get("rerank", "rerank")
+        with st.chat_message("assistant", avatar="⚖️"):
+            with st.spinner("Applying ranking decision and synthesizing constitutional response..."):
+                res_output = resume_constitution_chat(
+                    active_thread,
+                    checkpointer=checkpointer,
+                    store=global_store,
+                    selected_engine=res_engine,
+                    rerank_choice=res_rerank,
+                )
+        conv_db.update_conversation(active_thread, engine_mode=res_engine)
+        st.session_state.just_streamed_thread = active_thread
+        st.session_state.just_streamed_choice = res_engine
+        st.toast(
+            "Gemini AI reranking applied!" if res_rerank == "rerank" else "Direct retrieval applied!",
+            icon="✅",
+        )
+        st.rerun()
 
 # --- User Input Handling with Event Streaming & Word-by-Word Output ---
 chat_disabled = bool(st.session_state.pending_interrupt)
