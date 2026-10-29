@@ -125,6 +125,22 @@ class Settings:
     semantic_cache_enabled: bool = field(
         default_factory=lambda: os.getenv("SEMANTIC_CACHE_ENABLED", "true").lower() in ("true", "1", "yes")
     )
+
+    @property
+    def enable_exact_cache(self) -> bool:
+        return self.exact_cache_enabled
+
+    @enable_exact_cache.setter
+    def enable_exact_cache(self, val: bool) -> None:
+        self.exact_cache_enabled = val
+
+    @property
+    def enable_semantic_cache(self) -> bool:
+        return self.semantic_cache_enabled
+
+    @enable_semantic_cache.setter
+    def enable_semantic_cache(self, val: bool) -> None:
+        self.semantic_cache_enabled = val
     semantic_cache_threshold: float = field(
         default_factory=lambda: float(os.getenv("SEMANTIC_CACHE_THRESHOLD", "0.88"))
     )

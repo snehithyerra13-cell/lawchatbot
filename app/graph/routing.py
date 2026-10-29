@@ -14,9 +14,13 @@ def route_classification(
     "retrieve_constitution",
     "resolve_context",
     "handle_uncertainty",
+    "finalize_response",
 ]:
     """Route after classify_question node."""
     intent = state.get("intent", "uncertain")
+
+    if intent == "cached_response":
+        return "finalize_response"
 
     if intent == "out_of_scope":
         return "handle_uncertainty"

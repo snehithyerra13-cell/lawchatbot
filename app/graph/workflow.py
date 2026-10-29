@@ -87,6 +87,7 @@ def build_constitution_graph() -> StateGraph:
             "retrieve_constitution": "retrieve_constitution",
             "resolve_context": "resolve_context",
             "handle_uncertainty": "handle_uncertainty",
+            "finalize_response": "finalize_response",
         },
     )
 

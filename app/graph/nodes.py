@@ -49,9 +49,76 @@ def extract_article_numbers_from_query(query: str) -> List[str]:
 def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
     """Node 0: Send user query directly to LLM to rewrite and disambiguate for the Rule-Based engine."""
     from app.retrieval.gemini_service import rewrite_constitutional_query
+    from app.cache.semantic_cache import get_semantic_cache
+    from config.settings import get_settings
 
     raw_question = state.get("question", "")
     messages = state.get("messages", [])
+    settings = get_settings()
+
+    # Phase 4/6 Optimization: Early probe persistent exact and semantic cache BEFORE calling Gemini rewriter
+    if getattr(settings, "enable_exact_cache", True) or getattr(settings, "enable_semantic_cache", True):
+        try:
+            sem_cache = get_semantic_cache()
+            user_id = str(state.get("user_id") or "default_user")
+            clean_q = raw_question.strip()
+            q_vec = None
+
+            if getattr(settings, "enable_semantic_cache", True):
+                try:
+                    from app.retrieval.dual_pipeline import SharedConstitutionalCorpus
+                    corpus = SharedConstitutionalCorpus.get_instance()
+                    if corpus.vectorizer is not None:
+                        q_vec = corpus.vectorizer.transform([clean_q]).toarray().flatten()
+                except Exception as ex_vec:
+                    logger.debug("Query vector generation for cache probe failed: %s", ex_vec)
+
+            choice = state.get("selected_engine") or "both"
+            cache_res = sem_cache.lookup(query=clean_q, query_vector=q_vec, chatbot_mode=choice, user_id=user_id)
+            if not cache_res.hit and choice != "both":
+                cache_res = sem_cache.lookup(query=clean_q, query_vector=q_vec, chatbot_mode="both", user_id=user_id)
+            if not cache_res.hit and choice != "gemini":
+                cache_res = sem_cache.lookup(query=clean_q, query_vector=q_vec, chatbot_mode="gemini", user_id=user_id)
+
+            if cache_res.hit and cache_res.response_payload:
+                payload = cache_res.response_payload
+                rule_ans = payload.get("answer")
+                gemini_ans = payload.get("gemini_answer")
+                sources = payload.get("sources", [])
+                response_type = payload.get("response_type", "article")
+                target_art = payload.get("article_number") or cache_res.matched_article
+
+                logger.info(
+                    "Early LangGraph bypass: Query hit %s cache (entry_id=%s, latency=%.2fms)",
+                    cache_res.cache_type, cache_res.entry_id, cache_res.latency_ms
+                )
+
+                diag = {
+                    "success": True,
+                    "status_code": 200,
+                    "model_used": "semantic_cache",
+                    "note": f"cache_hit_{cache_res.cache_type}",
+                    "prompt_tokens": 0,
+                    "output_tokens": 0,
+                    "total_tokens": 0,
+                    "duration_seconds": cache_res.latency_ms / 1000.0,
+                }
+
+                return {
+                    "raw_question": raw_question,
+                    "question": raw_question,
+                    "rewritten_question": raw_question,
+                    "intent": "cached_response",
+                    "article_number": target_art,
+                    "answer": rule_ans,
+                    "gemini_answer": gemini_ans,
+                    "sources": sources,
+                    "response_type": response_type,
+                    "gemini_diagnostic": diag,
+                    "selected_engine": choice,
+                }
+        except Exception as e_cache:
+            logger.debug("Early cache probe skipped on exception: %s", e_cache)
 
     rewrite_result = rewrite_constitutional_query(
         question=raw_question,
@@ -110,6 +177,19 @@ def classify_question(state: ConstitutionState) -> Dict[str, Any]:
     existing_comp = state.get("comparison_articles")
 
     if existing_intent:
+        if existing_intent == "cached_response":
+            return {
+                "intent": "cached_response",
+                "article_number": existing_art,
+                "comparison_articles": None,
+                "comparison_data": None,
+                "gemini_answer": state.get("gemini_answer"),
+                "answer": state.get("answer"),
+                "sources": state.get("sources"),
+                "topic": state.get("topic"),
+                "needs_clarification": False,
+                "response_type": state.get("response_type", "article"),
+            }
         if existing_intent == "out_of_scope":
             return {
                 "intent": "out_of_scope",
@@ -1171,8 +1251,18 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
             )
             cost_tracker.record_request(rec)
 
-            # Store in semantic cache if Gemini succeeded and valid
-            if diag.get("success") and gemini_ans and is_cache_hit == "miss":
+            # Store in semantic cache if Gemini/answer succeeded and valid
+            if (gemini_ans or rule_ans) and is_cache_hit == "miss" and state.get("intent") not in ["out_of_scope", "uncertain", "greeting"]:
+                q_vec = None
+                try:
+                    from app.retrieval.dual_pipeline import SharedConstitutionalCorpus
+                    corpus = SharedConstitutionalCorpus.get_instance()
+                    if corpus.vectorizer is not None:
+                        q_vec = corpus.vectorizer.transform([clean_q]).toarray().flatten()
+                except Exception as ex_v:
+                    logger.debug("Vectorization for cache store failed: %s", ex_v)
+
+                target_article = state.get("article_number") or state.get("last_discussed_article")
                 sem_cache.store(
                     query=clean_q,
                     response_payload={
@@ -1180,10 +1270,12 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
                         "gemini_answer": gemini_ans,
                         "sources": sources,
                         "response_type": response_type,
+                        "article_number": target_article,
                     },
-                    chatbot_mode="gemini",
+                    chatbot_mode=choice,
+                    query_vector=q_vec,
                     user_id=str(state.get("user_id") or "default_user"),
-                    target_article=state.get("article_number") or state.get("last_discussed_article"),
+                    target_article=target_article,
                     is_valid=True,
                 )
         except Exception as ex:
