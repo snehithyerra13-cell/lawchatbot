@@ -1,0 +1,320 @@
+[
+  {
+    "query_id": "gold_001",
+    "query": "What is Article 14 of the Constitution of India?",
+    "category": "exact_article_lookup",
+    "relevant_chunk_ids": [
+      "const_14_p37_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 0.0,
+      "bm25_only": 0.0,
+      "hybrid_rrf": 0.0,
+      "reranked": 1.0
+    },
+    "mrr": {
+      "dense_only": 0.0,
+      "bm25_only": 0.14285714285714285,
+      "hybrid_rrf": 0.0,
+      "reranked": 1.0
+    },
+    "retrieved_top3_reranked": [
+      "const_14_p37_c01",
+      "const_preamble_p32_c01",
+      "const_124_p88_c01"
+    ],
+    "diagnostic_notes": [
+      "BM25 lexical deficit: Query uses paraphrase or conceptual vocabulary not appearing verbatim in the constitutional text.",
+      "Dense TF-IDF dispersion: Dense vector distributed similarity across multiple similar legal provisions.",
+      "Cross-encoder reranking successfully promoted relevant chunk over baseline dense ranking."
+    ]
+  },
+  {
+    "query_id": "gold_006",
+    "query": "Can the government arbitrarily discriminate against any citizen without reasonable basis?",
+    "category": "paraphrase",
+    "relevant_chunk_ids": [
+      "const_14_p37_c01",
+      "const_15_p342_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 0.5,
+      "bm25_only": 0.5,
+      "hybrid_rrf": 0.5,
+      "reranked": 0.0
+    },
+    "mrr": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.1111111111111111
+    },
+    "retrieved_top3_reranked": [
+      "const_292_p198_c01",
+      "const_3b_p316_c02",
+      "const_22_p42_c01"
+    ],
+    "diagnostic_notes": [
+      "BM25 lexical deficit: Query uses paraphrase or conceptual vocabulary not appearing verbatim in the constitutional text.",
+      "Dense TF-IDF dispersion: Dense vector distributed similarity across multiple similar legal provisions.",
+      "Multi-chunk requirement: Target requires retrieving 2 distinct chunks across the corpus.",
+      "Reranking demotion: Heuristic scoring prioritized title overlap over clause-level text match."
+    ]
+  },
+  {
+    "query_id": "gold_007",
+    "query": "Can a person be deprived of their liberty without following fair procedure established by law?",
+    "category": "paraphrase",
+    "relevant_chunk_ids": [
+      "const_21_p42_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 1.0
+    },
+    "mrr": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.5
+    },
+    "retrieved_top3_reranked": [
+      "const_119_p334_c01",
+      "const_21_p42_c01",
+      "const_32_p50_c02"
+    ],
+    "diagnostic_notes": [
+      "Reranking demotion: Heuristic scoring prioritized title overlap over clause-level text match."
+    ]
+  },
+  {
+    "query_id": "gold_008",
+    "query": "How can citizens directly move the Supreme Court when fundamental rights are violated?",
+    "category": "paraphrase",
+    "relevant_chunk_ids": [
+      "const_32_p50_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.0
+    },
+    "mrr": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.0
+    },
+    "retrieved_top3_reranked": [
+      "const_124_p88_c01",
+      "const_124_p88_c04",
+      "const_138_p95_c01"
+    ],
+    "diagnostic_notes": [
+      "Reranking demotion: Heuristic scoring prioritized title overlap over clause-level text match."
+    ]
+  },
+  {
+    "query_id": "gold_011",
+    "query": "Protection against double jeopardy and compelled self-incrimination in criminal trials",
+    "category": "conceptual_query",
+    "relevant_chunk_ids": [
+      "const_20_p42_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 1.0
+    },
+    "mrr": {
+      "dense_only": 0.5,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.5
+    },
+    "retrieved_top3_reranked": [
+      "const_22_p42_c01",
+      "const_20_p42_c01",
+      "const_361_p250_c01"
+    ],
+    "diagnostic_notes": [
+      "Reranking demotion: Heuristic scoring prioritized title overlap over clause-level text match."
+    ]
+  },
+  {
+    "query_id": "gold_013",
+    "query": "Freedom of conscience and the right freely to profess, practise and propagate religion",
+    "category": "conceptual_query",
+    "relevant_chunk_ids": [
+      "const_25_p349_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 1.0
+    },
+    "mrr": {
+      "dense_only": 0.3333333333333333,
+      "bm25_only": 0.2,
+      "hybrid_rrf": 0.25,
+      "reranked": 0.3333333333333333
+    },
+    "retrieved_top3_reranked": [
+      "const_24_p45_c01",
+      "const_11_p36_c01",
+      "const_25_p349_c01"
+    ],
+    "diagnostic_notes": [
+      "Sub-optimal rank position due to candidate pool competition."
+    ]
+  },
+  {
+    "query_id": "gold_015",
+    "query": "Power of the President of India to grant pardons, reprieves, respites or remissions of punishment",
+    "category": "conceptual_query",
+    "relevant_chunk_ids": [
+      "const_72_p362_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.0
+    },
+    "mrr": {
+      "dense_only": 0.25,
+      "bm25_only": 0.3333333333333333,
+      "hybrid_rrf": 0.3333333333333333,
+      "reranked": 0.1111111111111111
+    },
+    "retrieved_top3_reranked": [
+      "const_70_p63_c02",
+      "const_70_p63_c01",
+      "const_392_p282_c01"
+    ],
+    "diagnostic_notes": [
+      "Reranking demotion: Heuristic scoring prioritized title overlap over clause-level text match."
+    ]
+  },
+  {
+    "query_id": "gold_016",
+    "query": "What constitutes the Golden Triangle doctrine of Fundamental Rights in the Indian Constitution?",
+    "category": "multi_article_query",
+    "relevant_chunk_ids": [
+      "const_14_p37_c01",
+      "const_19_p40_c01",
+      "const_21_p42_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 0.0,
+      "bm25_only": 0.0,
+      "hybrid_rrf": 0.0,
+      "reranked": 0.0
+    },
+    "mrr": {
+      "dense_only": 0.0,
+      "bm25_only": 0.0,
+      "hybrid_rrf": 0.0,
+      "reranked": 0.0
+    },
+    "retrieved_top3_reranked": [
+      "const_13_p381_c01",
+      "const_10_p36_c01",
+      "const_32_p50_c02"
+    ],
+    "diagnostic_notes": [
+      "BM25 lexical deficit: Query uses paraphrase or conceptual vocabulary not appearing verbatim in the constitutional text.",
+      "Dense TF-IDF dispersion: Dense vector distributed similarity across multiple similar legal provisions.",
+      "Multi-chunk requirement: Target requires retrieving 3 distinct chunks across the corpus."
+    ]
+  },
+  {
+    "query_id": "gold_021",
+    "query": "Can the Supreme Court issue writs against High Courts under Article 32 as opposed to Article 226 powers?",
+    "category": "hard_negative",
+    "relevant_chunk_ids": [
+      "const_32_p50_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.0
+    },
+    "mrr": {
+      "dense_only": 0.25,
+      "bm25_only": 0.25,
+      "hybrid_rrf": 0.25,
+      "reranked": 0.0
+    },
+    "retrieved_top3_reranked": [
+      "const_226_p135_c01",
+      "const_226_p135_c03",
+      "const_226_p135_c02"
+    ],
+    "diagnostic_notes": [
+      "Reranking demotion: Heuristic scoring prioritized title overlap over clause-level text match."
+    ]
+  },
+  {
+    "query_id": "gold_022",
+    "query": "Does freedom of speech under Article 19 include absolute right to provoke violence without reasonable restrictions?",
+    "category": "hard_negative",
+    "relevant_chunk_ids": [
+      "const_19_p40_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 1.0
+    },
+    "mrr": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.3333333333333333
+    },
+    "retrieved_top3_reranked": [
+      "const_358_p246_c01",
+      "const_301_p202_c02",
+      "const_19_p40_c01"
+    ],
+    "diagnostic_notes": [
+      "Reranking demotion: Heuristic scoring prioritized title overlap over clause-level text match."
+    ]
+  },
+  {
+    "query_id": "gold_025",
+    "query": "Does Article 1 allow individual Indian States to secede or declare sovereignty away from Bharat?",
+    "category": "hard_negative",
+    "relevant_chunk_ids": [
+      "const_1_p33_c01"
+    ],
+    "recall_at_5": {
+      "dense_only": 1.0,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.0
+    },
+    "mrr": {
+      "dense_only": 0.25,
+      "bm25_only": 1.0,
+      "hybrid_rrf": 1.0,
+      "reranked": 0.0
+    },
+    "retrieved_top3_reranked": [
+      "const_31c_p49_c01",
+      "const_293_p198_c04",
+      "const_371g_p275_c02"
+    ],
+    "diagnostic_notes": [
+      "Reranking demotion: Heuristic scoring prioritized title overlap over clause-level text match."
+    ]
+  }
+]

@@ -300,10 +300,6 @@ def analyze_adversarial_query(query: str, history: Sequence[Any] = ()) -> Advers
     semantic_targets = []
     if "golden triangle" in q_lower:
         semantic_targets.extend(["14", "19", "21"])
-    if "discriminate" in q_lower or "discrimination" in q_lower:
-        semantic_targets.extend(["14", "15"])
-    if "education" in q_lower and ("children" in q_lower or "compulsory" in q_lower or "six" in q_lower or "14" in q_lower or "fourteen" in q_lower):
-        semantic_targets.append("21A")
 
     for art, info in LANDMARK_SUBJECTS.items():
         if any(kw in q_lower for kw in info.get("keywords", [])):
