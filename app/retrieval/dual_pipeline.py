@@ -119,6 +119,13 @@ class SharedConstitutionalCorpus:
         # 2. Lexical BM25 Index
         self.bm25 = BM25Okapi(self.tokenized_corpus)
 
+        # 3. Direct Article Inverted Index for Sub-Millisecond Candidate Routing
+        self.article_index: Dict[str, List[int]] = {}
+        for idx, chunk in enumerate(self.chunks):
+            art_no = str(chunk.get("article_number", "")).strip().upper()
+            if art_no:
+                self.article_index.setdefault(art_no, []).append(idx)
+
         logger.info(
             "SharedConstitutionalCorpus initialized: %d chunks, vector dim=%d, BM25 ready",
             len(self.chunks),
@@ -310,7 +317,12 @@ class NormalRAGPipeline:
         q_vec = self.corpus.vectorizer.transform([clean_q])
         cos_sims = (self.corpus.tfidf_matrix * q_vec.T).toarray().flatten()
 
-        top_indices = np.argsort(cos_sims)[::-1][: self.top_k]
+        if len(cos_sims) > self.top_k:
+            part = np.argpartition(cos_sims, -self.top_k)[-self.top_k:]
+            top_indices = part[np.argsort(cos_sims[part])[::-1]]
+        else:
+            top_indices = np.argsort(cos_sims)[::-1][: self.top_k]
+
         retrieved_chunks = [self.corpus.chunks[idx] for idx in top_indices]
         retrieved_chunk_ids = [c["chunk_id"] for c in retrieved_chunks]
         initial_scores = {c["chunk_id"]: float(round(cos_sims[idx], 4)) for idx, c in zip(top_indices, retrieved_chunks)}
@@ -440,20 +452,32 @@ class AdvancedRAGPipeline:
         q_tokens = tokenize(clean_q)
         t_prep_ms = round((time.perf_counter() - t0) * 1000.0, 3)
 
-        # 2. Dense Semantic Vector Retrieval
+        # 2. Dense Semantic Vector Retrieval (Optimized with np.argpartition)
         t1 = time.perf_counter()
         q_vec = self.corpus.vectorizer.transform([clean_q])
         cos_sims = (self.corpus.tfidf_matrix * q_vec.T).toarray().flatten()
-        dense_indices = np.argsort(cos_sims)[::-1][: self.dense_top_k]
+        if len(cos_sims) > self.dense_top_k:
+            part_dense = np.argpartition(cos_sims, -self.dense_top_k)[-self.dense_top_k:]
+            dense_indices = part_dense[np.argsort(cos_sims[part_dense])[::-1]]
+        else:
+            dense_indices = np.argsort(cos_sims)[::-1][: self.dense_top_k]
         t_dense_ms = round((time.perf_counter() - t1) * 1000.0, 3)
 
-        # 3. Lexical BM25 Retrieval
+        # 3. Lexical BM25 Retrieval (Optimized with np.argpartition)
         t2 = time.perf_counter()
-        bm25_scores = self.corpus.bm25.get_scores(q_tokens) if q_tokens else np.zeros(len(self.corpus.chunks))
-        bm25_indices = np.argsort(bm25_scores)[::-1][: self.bm25_top_k]
+        if q_tokens:
+            bm25_scores = self.corpus.bm25.get_scores(q_tokens)
+            if len(bm25_scores) > self.bm25_top_k:
+                part_bm25 = np.argpartition(bm25_scores, -self.bm25_top_k)[-self.bm25_top_k:]
+                bm25_indices = part_bm25[np.argsort(bm25_scores[part_bm25])[::-1]]
+            else:
+                bm25_indices = np.argsort(bm25_scores)[::-1][: self.bm25_top_k]
+        else:
+            bm25_scores = np.zeros(len(self.corpus.chunks))
+            bm25_indices = np.array([], dtype=int)
         t_bm25_ms = round((time.perf_counter() - t2) * 1000.0, 3)
 
-        # 4. Hybrid Reciprocal Rank Fusion (RRF)
+        # 4. Hybrid Reciprocal Rank Fusion (RRF) with Direct Article Index Boost
         t3 = time.perf_counter()
         rrf_scores: Dict[int, float] = {}
         for rank, idx in enumerate(dense_indices, start=1):
@@ -461,17 +485,28 @@ class AdvancedRAGPipeline:
         for rank, idx in enumerate(bm25_indices, start=1):
             rrf_scores[idx] = rrf_scores.get(idx, 0.0) + (1.0 / (self.rrf_k + rank))
 
-        # Sort combined candidates by RRF score
+        # Direct Article routing bonus for explicitly referenced provisions
+        art_matches = re.findall(r"\b(?:article|art\.?)\s*(\d+[a-z]?)\b", clean_q.lower())
+        for a in art_matches:
+            k = a.upper()
+            if k in self.corpus.article_index:
+                for idx in self.corpus.article_index[k]:
+                    rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.05
+        if "preamble" in clean_q.lower() and "PREAMBLE" in self.corpus.article_index:
+            for idx in self.corpus.article_index["PREAMBLE"]:
+                rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.05
+
+        # Sort combined candidates by RRF score (keeping index with candidate)
         sorted_rrf_indices = sorted(rrf_scores.keys(), key=lambda i: rrf_scores[i], reverse=True)[:15]
-        candidate_chunks = [self.corpus.chunks[idx] for idx in sorted_rrf_indices]
+        candidate_entries = [(idx, self.corpus.chunks[idx]) for idx in sorted_rrf_indices]
         t_fusion_ms = round((time.perf_counter() - t3) * 1000.0, 3)
 
-        # 5. Cross-Encoder Reranking
+        # 5. Cross-Encoder Reranking (O(1) dictionary lookups, eliminating O(N) list scans)
         t4 = time.perf_counter()
         reranked_scores: Dict[str, float] = {}
         scored_candidates: List[Tuple[float, Dict[str, Any]]] = []
 
-        for ch in candidate_chunks:
+        for idx, ch in candidate_entries:
             # Map chunk fields to format expected by reranker
             art_dict = {
                 "article_number": ch.get("article_number", ""),
@@ -480,8 +515,8 @@ class AdvancedRAGPipeline:
                 "part": ch.get("metadata", {}).get("part", ""),
             }
             s, _ = compute_heuristic_rerank_score(clean_q, art_dict)
-            # Incorporate RRF signal
-            combined_score = s + (rrf_scores.get(self.corpus.chunks.index(ch), 0.0) * 200.0)
+            # Incorporate RRF signal directly using index
+            combined_score = s + (rrf_scores.get(idx, 0.0) * 200.0)
             reranked_scores[ch["chunk_id"]] = float(round(combined_score, 2))
             scored_candidates.append((combined_score, ch))
 

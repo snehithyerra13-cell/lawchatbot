@@ -49,15 +49,15 @@
   },
   "ndcg_at_5": {
     "normal": 0.6967,
-    "advanced": 0.7401,
-    "delta": 0.0434,
-    "pct_change": 6.23
+    "advanced": 0.7497,
+    "delta": 0.053,
+    "pct_change": 7.61
   },
   "ndcg_at_10": {
     "normal": 0.6982,
-    "advanced": 0.7567,
-    "delta": 0.0585,
-    "pct_change": 8.38
+    "advanced": 0.7662,
+    "delta": 0.068,
+    "pct_change": 9.74
   },
   "source_hit_at_5_pct": {
     "normal": 92.0,

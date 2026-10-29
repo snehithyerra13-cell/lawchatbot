@@ -9,6 +9,7 @@ import pytest
 from app.retrieval.dual_pipeline import (
     AdvancedRAGPipeline,
     NormalRAGPipeline,
+    _GLOBAL_RAG_CACHE,
 )
 
 
@@ -25,6 +26,23 @@ def test_normal_rag_latency_bounded():
 
     p95 = np.percentile(times, 95)
     assert p95 < 50.0, f"Expected p95 < 50ms, got {p95}ms"
+
+
+def test_uncached_cold_latency():
+    """Measure exact cold execution times with cache cleared."""
+    _GLOBAL_RAG_CACHE.clear()
+    norm_pipe = NormalRAGPipeline()
+    adv_pipe = AdvancedRAGPipeline()
+
+    _GLOBAL_RAG_CACHE.clear()
+    out_n = norm_pipe.execute("Explain Article 21 and the right to life")
+    
+    _GLOBAL_RAG_CACHE.clear()
+    out_a = adv_pipe.execute("Explain Article 21 and the right to life")
+
+    assert out_n.timings_ms["total_ms"] < 100.0
+    assert out_a.timings_ms["total_ms"] < 100.0
+    assert out_a.timings_ms["reranking_ms"] < 20.0
 
 
 def test_advanced_rag_stage_breakdown():
