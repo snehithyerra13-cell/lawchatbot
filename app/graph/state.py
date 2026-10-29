@@ -58,6 +58,8 @@ class ConstitutionState(TypedDict, total=False):
     rerank_metadata: Optional[Dict[str, Any]]
     selected_engine: Optional[str]
     execution_time_seconds: Optional[float]
+    turn_start_time: Optional[float]
+    turn_timestamp: Optional[str]
     answerability_status: Optional[str]  # ANSWERABLE, INSUFFICIENT_EVIDENCE, OUT_OF_DOMAIN, RETRIEVAL_FAILURE, GENERATION_FAILURE
     abstention_reason: Optional[str]
     citation_validation: Optional[Dict[str, Any]]

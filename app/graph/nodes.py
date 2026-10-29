@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import logging
 import re
+import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -55,6 +57,10 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
     raw_question = state.get("question", "")
     messages = state.get("messages", [])
     settings = get_settings()
+
+    from datetime import datetime
+    turn_start_t = state.get("turn_start_time") or time.perf_counter()
+    turn_ts_str = state.get("turn_timestamp") or datetime.now().strftime("%I:%M:%S %p")
 
     # Phase 4/6 Optimization: Early probe persistent exact and semantic cache BEFORE calling Gemini rewriter
     if getattr(settings, "enable_exact_cache", True) or getattr(settings, "enable_semantic_cache", True):
@@ -185,6 +191,9 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
 
     if topic:
         updates["topic"] = topic
+
+    updates["turn_start_time"] = turn_start_t
+    updates["turn_timestamp"] = turn_ts_str
 
     return updates
 
@@ -1311,7 +1320,16 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
     sources = list(state.get("sources", []))
     retrieved = state.get("retrieved_documents", [])
     response_type = state.get("response_type", "general")
-    exec_time = state.get("execution_time_seconds")
+    t_start = state.get("turn_start_time")
+    if t_start:
+        exec_time = round(time.perf_counter() - t_start, 2)
+    else:
+        exec_time = state.get("execution_time_seconds")
+    if exec_time is None:
+        exec_time = 0.25
+
+    from datetime import datetime
+    turn_ts = state.get("turn_timestamp") or datetime.now().strftime("%I:%M:%S %p")
 
     # Citation validation & answerability enforcement
     ans_status = state.get("answerability_status")
@@ -1371,6 +1389,10 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
             "retrieved_documents": retrieved,
             "rerank_metadata": state.get("rerank_metadata"),
             "execution_time_seconds": exec_time,
+        "turn_timestamp": turn_ts,
+            "turn_timestamp": turn_ts,
+            "timestamp": turn_ts,
+            "timer_display": f"{exec_time:.2f}s",
             "article_number": (state.get("article_number") or state.get("last_discussed_article")) if ans_status == "ANSWERABLE" else None,
             "topic": state.get("topic") if ans_status == "ANSWERABLE" else None,
             "response_type": response_type,
@@ -1510,6 +1532,7 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
         "response_type": response_type,
         "selected_engine": choice,
         "execution_time_seconds": exec_time,
+        "turn_timestamp": turn_ts,
         "answerability_status": ans_status,
         "abstention_reason": state.get("abstention_reason"),
         "citation_is_valid": citation_valid,

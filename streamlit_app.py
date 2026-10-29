@@ -171,9 +171,14 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
     gemini_diag = None
     ans_status = None
     citation_val = None
+    exec_time = None
+    msg_ts = None
     if isinstance(msg_or_result, AIMessage):
         kwargs = getattr(msg_or_result, "additional_kwargs", {}) or {}
         exec_time = kwargs.get("execution_time_seconds")
+        if exec_time is None and kwargs.get("gemini_diagnostic"):
+            exec_time = kwargs["gemini_diagnostic"].get("duration_seconds")
+        msg_ts = kwargs.get("timestamp") or kwargs.get("turn_timestamp")
         sources = kwargs.get("sources") or []
         retrieved_docs = kwargs.get("retrieved_documents") or []
         art_num = kwargs.get("article_number")
@@ -186,6 +191,9 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
         citation_val = kwargs.get("citation_validation")
     elif isinstance(msg_or_result, dict):
         exec_time = msg_or_result.get("execution_time_seconds")
+        if exec_time is None and msg_or_result.get("gemini_diagnostic"):
+            exec_time = msg_or_result["gemini_diagnostic"].get("duration_seconds")
+        msg_ts = msg_or_result.get("timestamp") or msg_or_result.get("turn_timestamp")
         sources = msg_or_result.get("sources") or []
         retrieved_docs = msg_or_result.get("retrieved_documents") or []
         art_num = msg_or_result.get("article_number") or msg_or_result.get("last_discussed_article")
@@ -235,6 +243,7 @@ def extract_source_info(msg_or_result: Any) -> Dict[str, Any]:
         "source_hash": d0.get("source_hash", "") if not is_abstention_or_error else "",
         "total_sources": len(docs),
         "docs": docs,
+        "timestamp": msg_ts,
         "response_type": resp_type,
         "intent": intent,
         "answerability_status": ans_status,
@@ -296,7 +305,11 @@ def render_message_provenance_bar(info: Dict[str, Any]) -> None:
 
     time_badge = ""
     if info.get("exec_time") is not None:
-        time_badge = f'<span style="font-size: 0.74rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">⏱️ {info["exec_time"]:.2f}s</span>'
+        t_val = info["exec_time"]
+        t_str = f"{t_val:.2f}s" if isinstance(t_val, (int, float)) else str(t_val)
+        time_badge = f'<span style="font-size: 0.74rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">⏱️ {t_str}</span>'
+    elif info.get("timestamp"):
+        time_badge = f'<span style="font-size: 0.74rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">⏱️ {info["timestamp"]}</span>'
 
     # 1. Evidence-based Abstention Presentation
     if is_insufficient:
@@ -414,17 +427,6 @@ def render_message_provenance_bar(info: Dict[str, Any]) -> None:
         f'</div>'
     )
     st.markdown(bar_html, unsafe_allow_html=True)
-
-    if info.get("docs") and len(info["docs"]) > 0:
-        with st.expander(f"📚 Constitutional Evidence, Verification & Diagnostics ({len(info['docs'])} citations)", expanded=False):
-            st.markdown("**🛡️ Hallucination Defense & Evidence Grounding:**")
-            st.caption("• **Grounding Status:** 100% Grounded in Official Constitution of India PDF (SHA-256 verified)\n• **Embedding Vector Space:** 19,183 Dimensions (L2-normalized cosine space compatible)\n• **Citation Validation:** All cited articles verified against retrieved statutory passages (0 unsupported claims).")
-            for idx, d in enumerate(info["docs"]):
-                a_num = d.get("article_number", "")
-                p_s = d.get("page_start", "")
-                p_e = d.get("page_end", p_s)
-                pg = f"Page {p_s}" if p_s == p_e or not p_e else f"Pages {p_s}–{p_e}"
-                st.caption(f"**#{idx+1}: Article {a_num}** ({pg}, {d.get('part', 'Part III')}) — {d.get('article_title', '')}")
 
     if info.get("docs") and len(info["docs"]) > 0:
         with st.expander(f"📚 Constitutional Evidence, Verification & Diagnostics ({len(info['docs'])} citations)", expanded=False):
@@ -1715,7 +1717,30 @@ for msg_idx, msg in enumerate(thread_messages):
 
     if isinstance(msg, HumanMessage):
         with st.chat_message("user", avatar="👤"):
-            st.markdown(f"**{msg.content}**")
+            # Determine execution time / timer for this question from subsequent AIMessage
+            q_badges = []
+            resp_time_sec = None
+            if msg_idx + 1 < len(thread_messages) and isinstance(thread_messages[msg_idx + 1], AIMessage):
+                aim_kw = thread_messages[msg_idx + 1].additional_kwargs or {}
+                resp_time_sec = aim_kw.get("execution_time_seconds")
+                if resp_time_sec is None and aim_kw.get("gemini_diagnostic"):
+                    resp_time_sec = aim_kw["gemini_diagnostic"].get("duration_seconds")
+
+            if resp_time_sec is not None:
+                q_badges.append(f'<span style="font-family: monospace; font-size: 0.72rem; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 7px; border-radius: 6px; border: 1px solid #86efac;">⏱️ {resp_time_sec:.2f}s</span>')
+
+            q_ts = (msg.additional_kwargs or {}).get("timestamp")
+            if q_ts:
+                q_badges.append(f'<span style="font-size: 0.70rem; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 6px; border: 1px solid #e2e8f0;">🕒 {q_ts}</span>')
+
+            badge_bar = f'<div style="display: flex; align-items: center; gap: 6px;">{" ".join(q_badges)}</div>' if q_badges else ""
+            user_msg_html = (
+                f'<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 2px;">'
+                f'<span style="font-weight: 700; color: #0f172a; font-size: 0.95rem; line-height: 1.4;">{msg.content}</span>'
+                f'{badge_bar}'
+                f'</div>'
+            )
+            st.markdown(user_msg_html, unsafe_allow_html=True)
     elif isinstance(msg, AIMessage):
         choice = msg.additional_kwargs.get("selected_engine", "both")
         rule_content = msg.additional_kwargs.get("rule_answer") or msg.content
@@ -1917,7 +1942,16 @@ if active_query and active_query.strip():
 
     # Immediately display user message in chat
     with st.chat_message("user", avatar="👤"):
-        st.markdown(f"**{clean_query}**")
+        from datetime import datetime
+        now_ts = datetime.now().strftime("%I:%M:%S %p")
+        active_badge = f'<span style="font-size: 0.70rem; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 7px; border-radius: 6px; border: 1px solid #86efac;">⏱️ Active Query • {now_ts}</span>'
+        user_msg_html = (
+            f'<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 2px;">'
+            f'<span style="font-weight: 700; color: #0f172a; font-size: 0.95rem; line-height: 1.4;">{clean_query}</span>'
+            f'{active_badge}'
+            f'</div>'
+        )
+        st.markdown(user_msg_html, unsafe_allow_html=True)
 
     # Execute LangGraph turn with ChatGPT-style dynamic step progression
     rag_mode = st.session_state.get("rag_pipeline_mode", "advanced")

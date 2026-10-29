@@ -171,13 +171,23 @@ def run_constitution_chat(
         checkpointer=checkpointer, store=store, interrupt_nodes=interrupt_nodes
     )
 
-    human_msg = HumanMessage(content=question)
+    from datetime import datetime
+    t_ts = datetime.now().strftime("%I:%M:%S %p")
+    human_msg = HumanMessage(
+        content=question,
+        additional_kwargs={
+            "timestamp": t_ts,
+            "turn_start_time": t_start,
+        },
+    )
     input_state: Dict[str, Any] = {
         "messages": [human_msg],
         "question": question,
         "selected_engine": selected_engine or "both",
         "user_id": user_id or "default_user",
         "rerank_mode": rerank_mode or "no_rerank",
+        "turn_start_time": t_start,
+        "turn_timestamp": t_ts,
     }
 
     config: Dict[str, Any] = {"configurable": {"thread_id": thread_id}}
@@ -228,13 +238,23 @@ def run_constitution_chat_stream(
         checkpointer=checkpointer, store=store, interrupt_nodes=interrupt_nodes
     )
 
-    human_msg = HumanMessage(content=question)
+    from datetime import datetime
+    t_ts = datetime.now().strftime("%I:%M:%S %p")
+    human_msg = HumanMessage(
+        content=question,
+        additional_kwargs={
+            "timestamp": t_ts,
+            "turn_start_time": t_start,
+        },
+    )
     input_state: Dict[str, Any] = {
         "messages": [human_msg],
         "question": question,
         "selected_engine": selected_engine or "both",
         "user_id": user_id or "default_user",
         "rerank_mode": rerank_mode or "no_rerank",
+        "turn_start_time": t_start,
+        "turn_timestamp": t_ts,
     }
 
     config: Dict[str, Any] = {"configurable": {"thread_id": thread_id}}
