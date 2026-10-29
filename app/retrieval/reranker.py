@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def compute_heuristic_rerank_score(query: str, article: Dict[str, Any]) -> Tuple[float, str]:
-    """Analytical fallback reranking score when Gemini API is unavailable."""
+    """Analytical cross-scoring reranker incorporating clause precision and false-premise penalty."""
     q_lower = query.lower()
     art_no = str(article.get("article_number", "")).lower()
     title = str(article.get("article_title", "")).lower()
@@ -30,10 +30,24 @@ def compute_heuristic_rerank_score(query: str, article: Dict[str, Any]) -> Tuple
     score = 40.0  # Base score for passing Stage 1
     reasons = []
 
-    # 1. Exact article number match
-    if art_no and (f"article {art_no}" in q_lower or art_no in q_lower.split()):
-        score += 45.0
-        reasons.append(f"Explicit mention of Article {art_no.upper()}")
+    # Check for adversarial false premise penalty
+    from app.adversarial.query_classifier import analyze_adversarial_query
+    adv_res = analyze_adversarial_query(query)
+    if adv_res.is_false_premise:
+        # If this article is the falsely claimed article, heavily penalize and suppress explicit match bonus
+        if art_no in [a.lower() for a in adv_res.target_articles[:1]]:
+            score -= 50.0
+            reasons.append("Penalized: Subject to false constitutional premise assertion")
+        # If this article is the refuting provision (e.g. Art 18 for titles, Art 72 for pardon), boost it
+        if len(adv_res.target_articles) > 1 and art_no == adv_res.target_articles[1].lower():
+            score += 40.0
+            reasons.append("Boosted: Constitutional provision that refutes false premise")
+
+    # 1. Exact article number match (suppressed if falsely attributed)
+    if art_no and (f"article {art_no}" in q_lower or art_no in q_lower.split() or f"art {art_no}" in q_lower or f"art. {art_no}" in q_lower):
+        if not (adv_res.is_false_premise and art_no in [a.lower() for a in adv_res.target_articles[:1]]):
+            score += 45.0
+            reasons.append(f"Explicit mention of Article {art_no.upper()}")
 
     # 2. Exact Title match or high overlap
     q_words = set(re.findall(r"\w+", q_lower))
@@ -44,12 +58,27 @@ def compute_heuristic_rerank_score(query: str, article: Dict[str, Any]) -> Tuple
         score += overlap_score
         reasons.append(f"Key topic overlap: {', '.join(list(overlap)[:3])}")
 
-    # 3. Landmark provisions boost
-    if art_no in ["14", "19", "21", "32", "51a", "preamble"]:
-        score += 10.0
-        reasons.append("Core Constitutional Landmark Provision")
+    # 3. Clause-level specific term matching (e.g. "double jeopardy", "ex post facto", "begar", "habeas corpus")
+    clause_terms = [
+        "double jeopardy", "ex post facto", "self-incrimination", "untouchability",
+        "begar", "habeas corpus", "mandamus", "quo warranto", "certiorari", "prohibition",
+        "ordinance", "impeachment", "pardon", "reprieve", "respite", "remission",
+        "preventive detention", "equal protection", "equality before the law",
+        "freedom of conscience", "religious denomination", "court of record",
+        "advisory board", "twenty-four hours", "magistrate", "fourteen years"
+    ]
+    for ct in clause_terms:
+        if ct in q_lower and ct in text:
+            score += 15.0
+            reasons.append(f"Clause-level term match: {ct}")
+            break
 
-    # 4. Text density match
+    # 4. Multi-hop joint query support
+    if adv_res.subqueries and art_no in [a.lower() for a in adv_res.target_articles]:
+        score += 20.0
+        reasons.append(f"Multi-hop target article: Article {art_no.upper()}")
+
+    # 5. Text density match
     matching_terms = [w for w in q_words if len(w) > 3 and w in text]
     if matching_terms:
         score += min(len(matching_terms) * 3.0, 15.0)
@@ -196,3 +225,10 @@ def rerank_candidates(
         "count": len(reranked[:top_k]),
         "status": "Analytical Cross-Scoring Reranker Applied",
     }
+
+
+class LegalReranker:
+    """Wrapper class providing object-oriented reranking interface."""
+    def rerank(self, query: str, candidates: List[Dict[str, Any]], top_k: int = 5) -> List[Dict[str, Any]]:
+        results, _ = rerank_candidates(query, candidates, top_k=top_k)
+        return results

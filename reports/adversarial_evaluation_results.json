@@ -1,0 +1,2000 @@
+{
+  "timestamp": "2026-10-29T14:49:28.643796",
+  "total_test_cases": 175,
+  "normal_rag_baseline": {
+    "pipeline": "normal",
+    "total_cases": 175,
+    "failures_count": 69,
+    "overall_accuracy_pct": 60.57,
+    "retrieval": {
+      "recall_at_5": 0.5958,
+      "recall_at_10": 0.6341,
+      "precision_at_5": 0.1448,
+      "mrr": 0.4338,
+      "ndcg_at_10": 0.5833
+    },
+    "grounding": {
+      "abstention_accuracy_pct": 32.95,
+      "false_premise_resistance_pct": 24.0,
+      "citation_entailment_pct": 88.51
+    },
+    "latency": {
+      "p50_ms": 19.34,
+      "p95_ms": 65.3
+    },
+    "category_breakdown": {
+      "exact_article_and_clause": {
+        "total": 25,
+        "accuracy_pct": 100.0,
+        "mean_mrr": 0.8
+      },
+      "multi_hop_reasoning": {
+        "total": 25,
+        "accuracy_pct": 84.0,
+        "mean_mrr": 0.5457
+      },
+      "adversarial_false_premise": {
+        "total": 25,
+        "accuracy_pct": 24.0,
+        "mean_mrr": 0.0
+      },
+      "ambiguous": {
+        "total": 20,
+        "accuracy_pct": 0.0,
+        "mean_mrr": 0.0
+      },
+      "unanswerable_out_of_domain": {
+        "total": 10,
+        "accuracy_pct": 30.0,
+        "mean_mrr": 0.3
+      },
+      "unanswerable_nonexistent_article": {
+        "total": 5,
+        "accuracy_pct": 100.0,
+        "mean_mrr": 1.0
+      },
+      "unanswerable_current_affairs": {
+        "total": 5,
+        "accuracy_pct": 40.0,
+        "mean_mrr": 0.4
+      },
+      "unanswerable_corpus_limitation": {
+        "total": 5,
+        "accuracy_pct": 20.0,
+        "mean_mrr": 0.2
+      },
+      "temporal_dynamic": {
+        "total": 20,
+        "accuracy_pct": 85.0,
+        "mean_mrr": 0.6167
+      },
+      "long_context_stress": {
+        "total": 20,
+        "accuracy_pct": 80.0,
+        "mean_mrr": 0.6917
+      },
+      "conversational_memory": {
+        "total": 15,
+        "accuracy_pct": 66.7,
+        "mean_mrr": 0.3407
+      }
+    },
+    "failures": [
+      {
+        "query_id": "adv_B04",
+        "category": "multi_hop_reasoning",
+        "query": "Compare National Emergency under Article 352 with State Emergency (President's Rule) under Article 356.",
+        "pipeline": "normal",
+        "failure_reason": "Citation entailment failed: Article 75 cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_352_p239_c01",
+          "const_352_p239_c02",
+          "const_356_p35_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 352)\n\n> \"352. Proclamation of Emergency. \u2014 (1) If the President is satisfied that a grave eme"
+      },
+      {
+        "query_id": "adv_B09",
+        "category": "multi_hop_reasoning",
+        "query": "What is the relationship between the Ordinance-making power of the President in Article 123 and Parliament under Article 79?",
+        "pipeline": "normal",
+        "failure_reason": "System falsely abstained: The Constitution text establishes institutions (e.g. Article 124 for the Supreme Court), but does not record current individual officeholders or dynamic political appointments.",
+        "is_abstention": true,
+        "retrieved_chunks": [],
+        "answer_snippet": "**Insufficient Evidence / Out of Domain:**\nThe Constitution text establishes institutions (e.g. Article 124 for the Supreme Court), but does"
+      },
+      {
+        "query_id": "adv_B13",
+        "category": "multi_hop_reasoning",
+        "query": "What is the difference between impeachment of the President in Article 61 and removal of Supreme Court judges in Article 124(4)?",
+        "pipeline": "normal",
+        "failure_reason": "System falsely abstained: The Constitution text establishes institutions (e.g. Article 124 for the Supreme Court), but does not record current individual officeholders or dynamic political appointments.",
+        "is_abstention": true,
+        "retrieved_chunks": [],
+        "answer_snippet": "**Insufficient Evidence / Out of Domain:**\nThe Constitution text establishes institutions (e.g. Article 124 for the Supreme Court), but does"
+      },
+      {
+        "query_id": "adv_B16",
+        "category": "multi_hop_reasoning",
+        "query": "How do Article 12 definition of State and Article 36 definition of State in Part IV compare?",
+        "pipeline": "normal",
+        "failure_reason": "Citation entailment failed: Article 368 cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_12_p37_c02",
+          "const_12_p37_c01",
+          "const_36_p52_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 12)\n\n> \"(4) Nothing in this article shall apply to any amendment of this Constitution made un"
+      },
+      {
+        "query_id": "adv_C03",
+        "category": "adversarial_false_premise",
+        "query": "Explain why Article 19 guarantees an absolute right to publish defamatory statements without restriction.",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_19_p40_c01",
+          "const_12_p37_c02",
+          "const_21a_p42_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 19)\n\n> \"19. Protection of certain rights regarding freedom of speech, etc.\u2014 (1) All citizens "
+      },
+      {
+        "query_id": "adv_C05",
+        "category": "adversarial_false_premise",
+        "query": "How can an affected citizen file a direct writ in the High Court under Article 51A?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_51a_p56_c01",
+          "const_131_p92_c02",
+          "const_376_p280_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 51A)\n\n> \"51A. Fundamental duties.\u2014It shall be the duty of every citizen of India\u2014 (a) to abid"
+      },
+      {
+        "query_id": "adv_C07",
+        "category": "adversarial_false_premise",
+        "query": "Explain how Article 32 empowers District Courts to issue habeas corpus writs.",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_32_p50_c01",
+          "const_32_p50_c02",
+          "const_226_p135_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 32)\n\n> \"32. Remedies for enforcement of rights conferred by this Part .\u2014 (1) The right to mov"
+      },
+      {
+        "query_id": "adv_C08",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 44, how can citizens sue the State in court to enforce a Uniform Civil Code immediately?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_44_p54_c01",
+          "const_129_p92_c01",
+          "const_131_p92_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 44)\n\n> \"44. Uniform civil code for the citizens .\u2014The State shall endeavour to secure for the"
+      },
+      {
+        "query_id": "adv_C10",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 20, how can Parliament enact a criminal law imposing punishments for acts committed before the law existed?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_20_p42_c01",
+          "const_35_p51_c01",
+          "const_248_p177_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 20)\n\n> \"20. Protection in respect of conviction for offences. \u2014(1) No person shall be convict"
+      },
+      {
+        "query_id": "adv_C11",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 12, why are private multi-national corporations defined as the State?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_12_p37_c02",
+          "const_12_p37_c01",
+          "const_124a_p89_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 12)\n\n> \"(4) Nothing in this article shall apply to any amendment of this Constitution made un"
+      },
+      {
+        "query_id": "adv_C12",
+        "category": "adversarial_false_premise",
+        "query": "Explain how Article 17 allows untouchability in private domestic clubs.",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_17_p40_c01",
+          "const_239_p143_c02",
+          "const_84_p70_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 17)\n\n> \"17. Abolition of Untouchability.\u2014\u201cUntouchability\u201d is abolished and its practice in an"
+      },
+      {
+        "query_id": "adv_C13",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 21, how does the Constitution define the death penalty as unconstitutional in all cases?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_21_p42_c01",
+          "const_70_p63_c02",
+          "const_343_p234_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 21)\n\n> \"21. Protection of life and personal liberty. \u2014No person shall be deprived of his life"
+      },
+      {
+        "query_id": "adv_C14",
+        "category": "adversarial_false_premise",
+        "query": "Why does Article 76 grant the Attorney-General judicial authority to deliver binding court judgments?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_76_p66_c01",
+          "const_88_p71_c01",
+          "const_137_p94_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 76)\n\n> \"76. Attorney-General for India .\u2014(1) The President shall appoint a person who is qual"
+      },
+      {
+        "query_id": "adv_C15",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 61, why is the Prime Minister impeached by the Supreme Court?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_61_p60_c01",
+          "const_61_p60_c02",
+          "const_75_p65_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 61)\n\n> \"61. Procedure for impeachment of the President .\u2014 (1) When a President is to be impea"
+      },
+      {
+        "query_id": "adv_C16",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 123, how can the Governor of a State issue an Ordinance for Parliament?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_123_p365_c01",
+          "const_367_p258_c01",
+          "const_122_p87_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 123)\n\n> \"123. The Dadra and Nagar Haveli Land Reforms Regulation, 1971 (3 of 1971). 124. The "
+      },
+      {
+        "query_id": "adv_C17",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 22, why is an arrested suspect denied the right to consult a legal practitioner?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_22_p42_c01",
+          "const_12_p37_c02",
+          "const_29_p46_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 22)\n\n> \"22. Protection against arrest and detention in certain cases. \u2014(1) No person who is a"
+      },
+      {
+        "query_id": "adv_C18",
+        "category": "adversarial_false_premise",
+        "query": "Why does Article 25 make religious propagation illegal across India?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_25_p349_c01",
+          "const_28_p350_c01",
+          "const_24_p45_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 25)\n\n> \"25. Gas and gas-works. 26. Trade and commerce within the State subject to the provisi"
+      },
+      {
+        "query_id": "adv_C19",
+        "category": "adversarial_false_premise",
+        "query": "Explain why Article 368 allows the Prime Minister alone to amend the Constitution by decree.",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_368_p35_c01",
+          "const_12_p37_c02",
+          "const_75_p65_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 368)\n\n> \"Article 368. Power of Parliament to amend the Constitution and procedure therefor (S"
+      },
+      {
+        "query_id": "adv_C20",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 26, how are religious denominations prevented from owning moveable property?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_26_p45_c01",
+          "const_26_p45_c02",
+          "const_28_p350_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 26)\n\n> \"26. Freedom to manage religious affairs .\u2014Subject to public order, morality and healt"
+      },
+      {
+        "query_id": "adv_C21",
+        "category": "adversarial_false_premise",
+        "query": "Why does Article 29 force minority linguistic groups to adopt Hindi script?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_29_p46_c01",
+          "const_29_p46_c02",
+          "const_350b_p238_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 29)\n\n> \"29. Protection of interests of minorities .\u2014 (1) Any section of the citizens residing"
+      },
+      {
+        "query_id": "adv_C22",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 50, why is the Supreme Court placed directly under the administrative control of the Union Home Ministry?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_50_p55_c01",
+          "const_323a_p214_c01",
+          "const_66_p61_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 50)\n\n> \"50. Separation of judiciary from executive .\u2014The State shall take steps to separate t"
+      },
+      {
+        "query_id": "adv_C23",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 21A, why are children above the age of ten excluded from school education?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_21a_p42_c01",
+          "const_44_p54_c01",
+          "const_157_p102_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 21A)\n\n> \"2[21A. Right to education. \u2014The State shall provide free and compulsory education to"
+      },
+      {
+        "query_id": "adv_C24",
+        "category": "adversarial_false_premise",
+        "query": "Why does Article 143 allow the Supreme Court to order the President to resign?",
+        "pipeline": "normal",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_143_p96_c01",
+          "const_129_p92_c01",
+          "const_137_p94_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 143)\n\n> \"143. Power of the President to consult the Supreme Court. \u2014(1) If at any time it app"
+      },
+      {
+        "query_id": "adv_D01",
+        "category": "ambiguous",
+        "query": "Who is empowered to issue ordinances?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_226_p135_c01",
+          "const_138_p95_c01",
+          "const_10_p36_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 226)\n\n> \"2[226. Power of High Courts to issue certain writs. \u2014 (1) Notwithstanding anything i"
+      },
+      {
+        "query_id": "adv_D02",
+        "category": "ambiguous",
+        "query": "What is the quota percentage for backward classes?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_338b_p229_c01",
+          "const_342a_p233_c02",
+          "const_342a_p233_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 338B)\n\n> \"1[338B. National Commission for Backward Classes. \u2014 (1) There shall be a Commission"
+      },
+      {
+        "query_id": "adv_D03",
+        "category": "ambiguous",
+        "query": "How can an emergency be proclaimed?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_360_p248_c01",
+          "const_353_p241_c01",
+          "const_352_p239_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 360)\n\n> \"360. Provisions as to financial emergency. \u2014(1) If the President is satisfied that a"
+      },
+      {
+        "query_id": "adv_D04",
+        "category": "ambiguous",
+        "query": "What are the rules for appointment of judges?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_155_p101_c01",
+          "const_157_p102_c01",
+          "const_127_p91_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 155)\n\n> \"155. Appointment of Governor .\u2014The Governor of a State shall be appointed by the Pre"
+      },
+      {
+        "query_id": "adv_D05",
+        "category": "ambiguous",
+        "query": "Can fundamental rights be suspended?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_32_p50_c02",
+          "const_12_p37_c01",
+          "const_13_p381_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 32)\n\n> \"(4) The right guaranteed by this article shall not be suspended except as otherwise p"
+      },
+      {
+        "query_id": "adv_D06",
+        "category": "ambiguous",
+        "query": "How is the executive power exercised?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_162_p103_c01",
+          "const_256_p180_c01",
+          "const_154_p101_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 162)\n\n> \"162. Extent of executive power of State .\u2014Subject to the provisions of this Constitu"
+      },
+      {
+        "query_id": "adv_D07",
+        "category": "ambiguous",
+        "query": "What is the procedure for amendment?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_61_p60_c01",
+          "const_208_p126_c02",
+          "const_66_p61_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 61)\n\n> \"61. Procedure for impeachment of the President .\u2014 (1) When a President is to be impea"
+      },
+      {
+        "query_id": "adv_D08",
+        "category": "ambiguous",
+        "query": "What are the powers of the speaker?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_3b_p316_c01",
+          "const_93_p73_c03",
+          "const_129_p92_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 3B)\n\n> \"3B. Additional powers of the Bodoland Territorial Council to make laws.\u2014\"\n\n### Plain-"
+      },
+      {
+        "query_id": "adv_D09",
+        "category": "ambiguous",
+        "query": "Who can grant pardons?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_161_p367_c01",
+          "const_72_p362_c01",
+          "const_70_p63_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 161)\n\n> \"161. The Orissa Estates Abolition Act, 1951 (Orissa Act I of 1952).\"\n\n### Plain-Engl"
+      },
+      {
+        "query_id": "adv_D10",
+        "category": "ambiguous",
+        "query": "How are elections conducted?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_26_p45_c02",
+          "const_243z_p163_c01",
+          "const_243k_p155_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 26)\n\n> \"(3) No person attending any educational institution recognised by the State or receiv"
+      },
+      {
+        "query_id": "adv_D11",
+        "category": "ambiguous",
+        "query": "What is the qualification to be a member?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_93_p73_c01",
+          "const_190_p116_c01",
+          "const_101_p75_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 93)\n\n> \"93. The Speaker and Deputy Speaker of the House of the People. \u2014 The House of the Peo"
+      },
+      {
+        "query_id": "adv_D12",
+        "category": "ambiguous",
+        "query": "What is the term of office?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_67_p62_c01",
+          "const_156_p101_c01",
+          "const_61_p60_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 67)\n\n> \"67. Term of office of Vice -President.\u2014The Vice -President shall hold office for a te"
+      },
+      {
+        "query_id": "adv_D13",
+        "category": "ambiguous",
+        "query": "How is a bill passed?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_198_p120_c02",
+          "const_109_p80_c02",
+          "const_108_p79_c03"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 198)\n\n> \"(5) If a Money Bill passed by the Legislative Assembly and transmitted to the Legisl"
+      },
+      {
+        "query_id": "adv_D14",
+        "category": "ambiguous",
+        "query": "What is the procedure for impeachment?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_61_p60_c01",
+          "const_61_p60_c02",
+          "const_208_p126_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 61)\n\n> \"61. Procedure for impeachment of the President .\u2014 (1) When a President is to be impea"
+      },
+      {
+        "query_id": "adv_D15",
+        "category": "ambiguous",
+        "query": "Who appoints the council of ministers?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_74_p65_c01",
+          "const_164_p103_c01",
+          "const_166_p105_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 74)\n\n> \"74. Council of Ministers to aid and advise President.\u20141[(1) There shall be a Council "
+      },
+      {
+        "query_id": "adv_D16",
+        "category": "ambiguous",
+        "query": "What are the rules regarding public service commissions?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_322_p213_c01",
+          "const_320_p211_c01",
+          "const_321_p213_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 322)\n\n> \"322. Expenses of Public Service Commissions. \u2014The expenses of the Union or a State P"
+      },
+      {
+        "query_id": "adv_D17",
+        "category": "ambiguous",
+        "query": "How is money bill defined?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_110_p81_c02",
+          "const_199_p121_c02",
+          "const_198_p120_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 110)\n\n> \"(2) A Bill shall not be deemed to be a Money Bill by reason only that it provides fo"
+      },
+      {
+        "query_id": "adv_D18",
+        "category": "ambiguous",
+        "query": "What is the power of superintendence?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_227_p136_c01",
+          "const_257_p180_c01",
+          "const_162_p103_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 227)\n\n> \"227. Power of superintendence over all courts by the High Court .\u2014 4[(1) Every High "
+      },
+      {
+        "query_id": "adv_D19",
+        "category": "ambiguous",
+        "query": "What are the official languages?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_345_p235_c01",
+          "const_343_p234_c02",
+          "const_343_p234_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 345)\n\n> \"345. Official language or languages of a State. \u2014Subject to the provisions of articl"
+      },
+      {
+        "query_id": "adv_D20",
+        "category": "ambiguous",
+        "query": "How are disputes regarding boundaries settled?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_3_p193_c01",
+          "const_19_p40_c01",
+          "const_2_p33_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 3)\n\n> \"3. Sub-clause (c) re-lettered as sub-clause (d) by s. 3, ibid. (w.e.f. 1-6-1993).\"\n\n##"
+      },
+      {
+        "query_id": "adv_E01",
+        "category": "unanswerable_out_of_domain",
+        "query": "What are the rules for filing patent applications under the US Patent Act?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_208_p126_c01",
+          "const_118_p86_c01",
+          "const_145_p96_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 208)\n\n> \"208. Rules of procedure .\u2014 (1) A House of the Legislature of a State may make rules "
+      },
+      {
+        "query_id": "adv_E02",
+        "category": "unanswerable_out_of_domain",
+        "query": "Write a Python script to implement binary search.",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_343_p234_c01",
+          "const_29_p46_c01",
+          "const_12_p37_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 343)\n\n> \"343. Official language of the Union.\u2014 (1) The official language of the Union shall b"
+      },
+      {
+        "query_id": "adv_E03",
+        "category": "unanswerable_out_of_domain",
+        "query": "What is the score of the latest cricket test match between India and Australia?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_66_p61_c02",
+          "const_58_p59_c01",
+          "const_93_p73_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 66)\n\n> \"(4) A person shall not be eligible for election as Vice -President if he holds any of"
+      },
+      {
+        "query_id": "adv_E04",
+        "category": "unanswerable_out_of_domain",
+        "query": "What is the capital city of France and its population?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_17_p40_c01",
+          "const_66_p61_c02",
+          "const_334a_p224_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 17)\n\n> \"17. Abolition of Untouchability.\u2014\u201cUntouchability\u201d is abolished and its practice in an"
+      },
+      {
+        "query_id": "adv_E05",
+        "category": "unanswerable_out_of_domain",
+        "query": "How do you cook traditional Hyderabadi chicken biryani?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_134a_p94_c01",
+          "const_69_p62_c01",
+          "const_320_p211_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 134A)\n\n> \"1[134A. Certificate for appeal to the Supreme Court. \u2014Every High Court, passing or "
+      },
+      {
+        "query_id": "adv_E08",
+        "category": "unanswerable_out_of_domain",
+        "query": "What are the rules of the German Basic Law regarding the Federal Constitutional Court?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_371c_p268_c01",
+          "const_208_p126_c01",
+          "const_145_p96_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 371C)\n\n> \"2[371C. Special provision with respect to the State of Manipur. \u2014 (1) Notwithstandi"
+      },
+      {
+        "query_id": "adv_E10",
+        "category": "unanswerable_out_of_domain",
+        "query": "How does quantum superposition work in quantum mechanics?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_376_p280_c02",
+          "const_40_p53_c01",
+          "const_43_p53_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 376)\n\n> \"(3) In this article, the expression \u201cJudge\u201d does not include an acting Judge or an a"
+      },
+      {
+        "query_id": "adv_E16",
+        "category": "unanswerable_current_affairs",
+        "query": "Who is the Prime Minister of India right now?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_75_p65_c01",
+          "const_77_p66_c02",
+          "const_74_p65_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 75)\n\n> \"75. Other provisions as to Ministers. \u2014(1) The Prime Minister shall be appointed by t"
+      },
+      {
+        "query_id": "adv_E18",
+        "category": "unanswerable_current_affairs",
+        "query": "Name the current President of India.",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_52_p57_c01",
+          "const_115_p84_c01",
+          "const_205_p124_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 52)\n\n> \"52. The President of India.\u2014There shall be a President of India.\"\n\n### Plain-English "
+      },
+      {
+        "query_id": "adv_E19",
+        "category": "unanswerable_current_affairs",
+        "query": "Who won the recent Lok Sabha general election?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_243a_p150_c01",
+          "const_87_p71_c01",
+          "const_57_p59_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 243A)\n\n> \"243A. Gram Sabha. \u2014A Gram Sabha may exercise such powers and perform such functions"
+      },
+      {
+        "query_id": "adv_E21",
+        "category": "unanswerable_corpus_limitation",
+        "query": "What was the exact weather in New Delhi when the Constitution was signed on 26 November 1949?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_preamble_p32_c01",
+          "const_126_p91_c01",
+          "const_2_p33_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article PREAMBLE)\n\n> \"WE, THE PEOPLE OF INDIA, having solemnly resolved to constitute India into a 1["
+      },
+      {
+        "query_id": "adv_E22",
+        "category": "unanswerable_corpus_limitation",
+        "query": "What fountain pen brand did Dr. B.R. Ambedkar use to draft the text?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_4_p258_c01",
+          "const_394a_p283_c01",
+          "const_343_p234_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 4)\n\n> \"4. See the Constitution (Declaration as to Foreign States) Order, 1950 (C.O. 2). 5. Ad"
+      },
+      {
+        "query_id": "adv_E23",
+        "category": "unanswerable_corpus_limitation",
+        "query": "How many pages does Chapter 99 of the Constitution contain?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_152_p101_c01",
+          "const_169_p107_c01",
+          "const_376_p280_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 152)\n\n> \"152. Definition.\u2014In this Part, unless the context otherwise requires, the expression"
+      },
+      {
+        "query_id": "adv_E25",
+        "category": "unanswerable_corpus_limitation",
+        "query": "What does Schedule 25 of the Constitution say?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_25_p349_c01",
+          "const_334a_p224_c02",
+          "const_62_p361_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 25)\n\n> \"25. Gas and gas-works. 26. Trade and commerce within the State subject to the provisi"
+      },
+      {
+        "query_id": "adv_F06",
+        "category": "temporal_dynamic",
+        "query": "Did Parliament pass an amendment to Article 19 this morning?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_19_p40_c01",
+          "const_358_p246_c01",
+          "const_239_p143_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 19)\n\n> \"19. Protection of certain rights regarding freedom of speech, etc.\u2014 (1) All citizens "
+      },
+      {
+        "query_id": "adv_F07",
+        "category": "temporal_dynamic",
+        "query": "What dynamic changes were made to Article 370 in the news last month?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_370_p35_c01",
+          "const_334a_p224_c04",
+          "const_196_p119_c03"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 370)\n\n> \"Article 370. Temporary provisions with respect to the State of Jammu and Kashmir (Se"
+      },
+      {
+        "query_id": "adv_F16",
+        "category": "temporal_dynamic",
+        "query": "Did the President sign a new amendment bill last night?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_2_p33_c01",
+          "const_111_p82_c01",
+          "const_201_p122_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 2)\n\n> \"2. Admission or establishment of new States. \u2014Parliament may by law admit into the Uni"
+      },
+      {
+        "query_id": "adv_G06",
+        "category": "long_context_stress",
+        "query": "In Article 352, what requirement was added for a written communication of the Cabinet decision?",
+        "pipeline": "normal",
+        "failure_reason": "Citation entailment failed: Article 75 cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_352_p239_c01",
+          "const_352_p239_c02",
+          "const_345_p235_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 352)\n\n> \"352. Proclamation of Emergency. \u2014 (1) If the President is satisfied that a grave eme"
+      },
+      {
+        "query_id": "adv_G07",
+        "category": "long_context_stress",
+        "query": "Under Article 124(2), what is the retirement age specified for a Supreme Court judge?",
+        "pipeline": "normal",
+        "failure_reason": "Citation entailment failed: Article 124A cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_124_p88_c01",
+          "const_124_p88_c04",
+          "const_124_p88_c03"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 124)\n\n> \"124. Establishment and constitution of the Supreme Court .\u2014 (1) There shall be a Sup"
+      },
+      {
+        "query_id": "adv_G08",
+        "category": "long_context_stress",
+        "query": "What is the minimum qualification period as High Court judge to be appointed to Supreme Court in Article 124(3)?",
+        "pipeline": "normal",
+        "failure_reason": "Citation entailment failed: Article 124A cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_124_p88_c01",
+          "const_124_p88_c04",
+          "const_124_p88_c03"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 124)\n\n> \"124. Establishment and constitution of the Supreme Court .\u2014 (1) There shall be a Sup"
+      },
+      {
+        "query_id": "adv_G16",
+        "category": "long_context_stress",
+        "query": "What is the procedure for removal of a High Court judge under Article 217(1)(b)?",
+        "pipeline": "normal",
+        "failure_reason": "Citation entailment failed: Article 217 cited in response does not exist in local Constitution PDF; Article 221 cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_376_p280_c01",
+          "const_124_p88_c04",
+          "const_121_p87_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 376)\n\n> \"376. Provisions as to Judges of High Courts. \u2014 (1) Notwithstanding anything in claus"
+      },
+      {
+        "query_id": "adv_H06",
+        "category": "conversational_memory",
+        "query": "explain about it in detail and crisp",
+        "pipeline": "normal",
+        "failure_reason": "Citation entailment failed: Quotation fidelity low: 0.50. Hallucinated quotes detected.",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_69_p62_c01",
+          "const_394a_p283_c01",
+          "const_44_p54_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 69)\n\n> \"69. Oath or affirmation by the Vice -President.\u2014Every Vice - President shall, before "
+      },
+      {
+        "query_id": "adv_H07",
+        "category": "conversational_memory",
+        "query": "what were the exceptions?",
+        "pipeline": "normal",
+        "failure_reason": "Citation entailment failed: Article 239 cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_243l_p156_c01",
+          "const_364_p253_c01",
+          "const_243m_p156_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 243L)\n\n> \"243L. Application to Union territories. \u2014The provisions of this Part shall apply to"
+      },
+      {
+        "query_id": "adv_H11",
+        "category": "conversational_memory",
+        "query": "in detail",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_243d_p152_c03",
+          "const_211_p128_c01",
+          "const_372_p277_c03"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 243D)\n\n> \"(6) Nothing in this Part shall prevent the Legislature of a State from making any p"
+      },
+      {
+        "query_id": "adv_H12",
+        "category": "conversational_memory",
+        "query": "give me an example",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_364_p253_c02",
+          "const_35_p51_c01",
+          "const_169_p107_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 364)\n\n> \"(2) In this article\u2014 (a) \u201cmajor port\u201d means a port declared to be a major port by or"
+      },
+      {
+        "query_id": "adv_H15",
+        "category": "conversational_memory",
+        "query": "What is the capital of France?",
+        "pipeline": "normal",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_66_p61_c02",
+          "const_334a_p224_c01",
+          "const_93_p73_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 66)\n\n> \"(4) A person shall not be eligible for election as Vice -President if he holds any of"
+      }
+    ]
+  },
+  "advanced_rag_hardened": {
+    "pipeline": "advanced",
+    "total_cases": 175,
+    "failures_count": 64,
+    "overall_accuracy_pct": 63.43,
+    "retrieval": {
+      "recall_at_5": 0.6264,
+      "recall_at_10": 0.6379,
+      "precision_at_5": 0.1586,
+      "mrr": 0.4829,
+      "ndcg_at_10": 0.601
+    },
+    "grounding": {
+      "abstention_accuracy_pct": 39.77,
+      "false_premise_resistance_pct": 24.0,
+      "citation_entailment_pct": 87.36
+    },
+    "latency": {
+      "p50_ms": 19.7,
+      "p95_ms": 88.49
+    },
+    "category_breakdown": {
+      "exact_article_and_clause": {
+        "total": 25,
+        "accuracy_pct": 100.0,
+        "mean_mrr": 0.8
+      },
+      "multi_hop_reasoning": {
+        "total": 25,
+        "accuracy_pct": 84.0,
+        "mean_mrr": 0.5533
+      },
+      "adversarial_false_premise": {
+        "total": 25,
+        "accuracy_pct": 24.0,
+        "mean_mrr": 0.08
+      },
+      "ambiguous": {
+        "total": 20,
+        "accuracy_pct": 10.0,
+        "mean_mrr": 0.1
+      },
+      "unanswerable_out_of_domain": {
+        "total": 10,
+        "accuracy_pct": 50.0,
+        "mean_mrr": 0.5
+      },
+      "unanswerable_nonexistent_article": {
+        "total": 5,
+        "accuracy_pct": 100.0,
+        "mean_mrr": 1.0
+      },
+      "unanswerable_current_affairs": {
+        "total": 5,
+        "accuracy_pct": 40.0,
+        "mean_mrr": 0.4
+      },
+      "unanswerable_corpus_limitation": {
+        "total": 5,
+        "accuracy_pct": 40.0,
+        "mean_mrr": 0.4
+      },
+      "temporal_dynamic": {
+        "total": 20,
+        "accuracy_pct": 85.0,
+        "mean_mrr": 0.65
+      },
+      "long_context_stress": {
+        "total": 20,
+        "accuracy_pct": 80.0,
+        "mean_mrr": 0.7
+      },
+      "conversational_memory": {
+        "total": 15,
+        "accuracy_pct": 66.7,
+        "mean_mrr": 0.3778
+      }
+    },
+    "failures": [
+      {
+        "query_id": "adv_B09",
+        "category": "multi_hop_reasoning",
+        "query": "What is the relationship between the Ordinance-making power of the President in Article 123 and Parliament under Article 79?",
+        "pipeline": "advanced",
+        "failure_reason": "System falsely abstained: The Constitution text establishes institutions (e.g. Article 124 for the Supreme Court), but does not record current individual officeholders or dynamic political appointments.",
+        "is_abstention": true,
+        "retrieved_chunks": [],
+        "answer_snippet": "**Insufficient Evidence / Out of Domain:**\nThe Constitution text establishes institutions (e.g. Article 124 for the Supreme Court), but does"
+      },
+      {
+        "query_id": "adv_B13",
+        "category": "multi_hop_reasoning",
+        "query": "What is the difference between impeachment of the President in Article 61 and removal of Supreme Court judges in Article 124(4)?",
+        "pipeline": "advanced",
+        "failure_reason": "System falsely abstained: The Constitution text establishes institutions (e.g. Article 124 for the Supreme Court), but does not record current individual officeholders or dynamic political appointments.",
+        "is_abstention": true,
+        "retrieved_chunks": [],
+        "answer_snippet": "**Insufficient Evidence / Out of Domain:**\nThe Constitution text establishes institutions (e.g. Article 124 for the Supreme Court), but does"
+      },
+      {
+        "query_id": "adv_B16",
+        "category": "multi_hop_reasoning",
+        "query": "How do Article 12 definition of State and Article 36 definition of State in Part IV compare?",
+        "pipeline": "advanced",
+        "failure_reason": "Citation entailment failed: Article 368 cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_36_p52_c01",
+          "const_12_p37_c02",
+          "const_12_p37_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 36)\n\n> \"36. Definition.\u2014In this Part, unless the context otherwise requires, \u201cthe State\u201d has "
+      },
+      {
+        "query_id": "adv_B20",
+        "category": "multi_hop_reasoning",
+        "query": "How do Fundamental Rights under Part III and Directive Principles under Part IV relate under Article 37?",
+        "pipeline": "advanced",
+        "failure_reason": "Citation entailment failed: Article 13 cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_37_p52_c01",
+          "const_31c_p49_c01",
+          "const_36_p52_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 37)\n\n> \"37. Application of the principles contained in this Part. \u2014The provisions contained i"
+      },
+      {
+        "query_id": "adv_C03",
+        "category": "adversarial_false_premise",
+        "query": "Explain why Article 19 guarantees an absolute right to publish defamatory statements without restriction.",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_19_p40_c01",
+          "const_211_p128_c01",
+          "const_293_p198_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 19)\n\n> \"19. Protection of certain rights regarding freedom of speech, etc.\u2014 (1) All citizens "
+      },
+      {
+        "query_id": "adv_C05",
+        "category": "adversarial_false_premise",
+        "query": "How can an affected citizen file a direct writ in the High Court under Article 51A?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_51a_p56_c01",
+          "const_376_p280_c01",
+          "const_229_p138_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 51A)\n\n> \"51A. Fundamental duties.\u2014It shall be the duty of every citizen of India\u2014 (a) to abid"
+      },
+      {
+        "query_id": "adv_C07",
+        "category": "adversarial_false_premise",
+        "query": "Explain how Article 32 empowers District Courts to issue habeas corpus writs.",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_32_p50_c01",
+          "const_32_p50_c02",
+          "const_226_p135_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 32)\n\n> \"32. Remedies for enforcement of rights conferred by this Part .\u2014 (1) The right to mov"
+      },
+      {
+        "query_id": "adv_C08",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 44, how can citizens sue the State in court to enforce a Uniform Civil Code immediately?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_44_p54_c01",
+          "const_300_p201_c01",
+          "const_64_p352_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 44)\n\n> \"44. Uniform civil code for the citizens .\u2014The State shall endeavour to secure for the"
+      },
+      {
+        "query_id": "adv_C10",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 20, how can Parliament enact a criminal law imposing punishments for acts committed before the law existed?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_20_p42_c01",
+          "const_35_p51_c01",
+          "const_220_p132_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 20)\n\n> \"20. Protection in respect of conviction for offences. \u2014(1) No person shall be convict"
+      },
+      {
+        "query_id": "adv_C11",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 12, why are private multi-national corporations defined as the State?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_12_p37_c02",
+          "const_12_p37_c01",
+          "const_42_p343_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 12)\n\n> \"12. Definition.\u2014In this Part, unless the context otherwise requires, \u201cthe State\u201d incl"
+      },
+      {
+        "query_id": "adv_C12",
+        "category": "adversarial_false_premise",
+        "query": "Explain how Article 17 allows untouchability in private domestic clubs.",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_17_p40_c01",
+          "const_239_p143_c02",
+          "const_84_p70_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 17)\n\n> \"17. Abolition of Untouchability.\u2014\u201cUntouchability\u201d is abolished and its practice in an"
+      },
+      {
+        "query_id": "adv_C13",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 21, how does the Constitution define the death penalty as unconstitutional in all cases?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_21_p42_c01",
+          "const_70_p63_c02",
+          "const_343_p234_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 21)\n\n> \"21. Protection of life and personal liberty. \u2014No person shall be deprived of his life"
+      },
+      {
+        "query_id": "adv_C14",
+        "category": "adversarial_false_premise",
+        "query": "Why does Article 76 grant the Attorney-General judicial authority to deliver binding court judgments?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_76_p66_c01",
+          "const_88_p71_c01",
+          "const_137_p94_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 76)\n\n> \"76. Attorney-General for India .\u2014(1) The President shall appoint a person who is qual"
+      },
+      {
+        "query_id": "adv_C15",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 61, why is the Prime Minister impeached by the Supreme Court?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_61_p60_c01",
+          "const_61_p60_c02",
+          "const_75_p65_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 61)\n\n> \"61. Procedure for impeachment of the President .\u2014 (1) When a President is to be impea"
+      },
+      {
+        "query_id": "adv_C16",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 123, how can the Governor of a State issue an Ordinance for Parliament?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_123_p365_c01",
+          "const_367_p258_c01",
+          "const_212_p128_c03"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 123)\n\n> \"123. The Dadra and Nagar Haveli Land Reforms Regulation, 1971 (3 of 1971). 124. The "
+      },
+      {
+        "query_id": "adv_C17",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 22, why is an arrested suspect denied the right to consult a legal practitioner?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_22_p42_c01",
+          "const_39a_p53_c01",
+          "const_29_p46_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 22)\n\n> \"22. Protection against arrest and detention in certain cases. \u2014(1) No person who is a"
+      },
+      {
+        "query_id": "adv_C18",
+        "category": "adversarial_false_premise",
+        "query": "Why does Article 25 make religious propagation illegal across India?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_25_p349_c01",
+          "const_24_p45_c01",
+          "const_28_p350_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 25)\n\n> \"25. Gas and gas-works. 26. Trade and commerce within the State subject to the provisi"
+      },
+      {
+        "query_id": "adv_C19",
+        "category": "adversarial_false_premise",
+        "query": "Explain why Article 368 allows the Prime Minister alone to amend the Constitution by decree.",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_368_p35_c01",
+          "const_77_p66_c02",
+          "const_75_p65_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 368)\n\n> \"Article 368. Power of Parliament to amend the Constitution and procedure therefor (S"
+      },
+      {
+        "query_id": "adv_C20",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 26, how are religious denominations prevented from owning moveable property?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_26_p45_c01",
+          "const_26_p45_c02",
+          "const_28_p350_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 26)\n\n> \"26. Freedom to manage religious affairs .\u2014Subject to public order, morality and healt"
+      },
+      {
+        "query_id": "adv_C21",
+        "category": "adversarial_false_premise",
+        "query": "Why does Article 29 force minority linguistic groups to adopt Hindi script?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_29_p46_c01",
+          "const_29_p46_c02",
+          "const_350b_p238_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 29)\n\n> \"29. Protection of interests of minorities .\u2014 (1) Any section of the citizens residing"
+      },
+      {
+        "query_id": "adv_C22",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 50, why is the Supreme Court placed directly under the administrative control of the Union Home Ministry?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_50_p55_c01",
+          "const_323a_p214_c01",
+          "const_146_p98_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 50)\n\n> \"50. Separation of judiciary from executive .\u2014The State shall take steps to separate t"
+      },
+      {
+        "query_id": "adv_C23",
+        "category": "adversarial_false_premise",
+        "query": "Under Article 21A, why are children above the age of ten excluded from school education?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_21a_p42_c01",
+          "const_44_p54_c01",
+          "const_45_p343_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 21A)\n\n> \"2[21A. Right to education. \u2014The State shall provide free and compulsory education to"
+      },
+      {
+        "query_id": "adv_C24",
+        "category": "adversarial_false_premise",
+        "query": "Why does Article 143 allow the Supreme Court to order the President to resign?",
+        "pipeline": "advanced",
+        "failure_reason": "False premise was accepted without refutation",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_143_p96_c01",
+          "const_124_p88_c01",
+          "const_137_p94_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 143)\n\n> \"143. Power of the President to consult the Supreme Court. \u2014(1) If at any time it app"
+      },
+      {
+        "query_id": "adv_D01",
+        "category": "ambiguous",
+        "query": "Who is empowered to issue ordinances?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_226_p135_c01",
+          "const_122_p87_c01",
+          "const_138_p95_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 122)\n\n> \"122. Courts not to inquire into proceedings of Parliament. \u2014 (1) The validity of any"
+      },
+      {
+        "query_id": "adv_D02",
+        "category": "ambiguous",
+        "query": "What is the quota percentage for backward classes?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_338b_p229_c01",
+          "const_342a_p233_c01",
+          "const_342a_p233_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 338B)\n\n> \"1[338B. National Commission for Backward Classes. \u2014 (1) There shall be a Commission"
+      },
+      {
+        "query_id": "adv_D03",
+        "category": "ambiguous",
+        "query": "How can an emergency be proclaimed?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_360_p248_c01",
+          "const_352_p239_c01",
+          "const_353_p241_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 360)\n\n> \"360. Provisions as to financial emergency. \u2014(1) If the President is satisfied that a"
+      },
+      {
+        "query_id": "adv_D05",
+        "category": "ambiguous",
+        "query": "Can fundamental rights be suspended?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_32_p50_c02",
+          "const_12_p37_c01",
+          "const_10_p36_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 32)\n\n> \"(4) The right guaranteed by this article shall not be suspended except as otherwise p"
+      },
+      {
+        "query_id": "adv_D06",
+        "category": "ambiguous",
+        "query": "How is the executive power exercised?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_154_p101_c01",
+          "const_256_p180_c01",
+          "const_162_p103_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 53)\n\n> \"53. Executive power of the Union.\u2014(1) The executive power of the Union shall be veste"
+      },
+      {
+        "query_id": "adv_D07",
+        "category": "ambiguous",
+        "query": "What is the procedure for amendment?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_208_p126_c02",
+          "const_118_p86_c02",
+          "const_118_p86_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 61)\n\n> \"61. Procedure for impeachment of the President .\u2014 (1) When a President is to be impea"
+      },
+      {
+        "query_id": "adv_D09",
+        "category": "ambiguous",
+        "query": "Who can grant pardons?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_161_p367_c01",
+          "const_72_p362_c01",
+          "const_70_p63_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 70)\n\n> \"(1) The President shall have the power to grant pardons, reprieves, respites or remis"
+      },
+      {
+        "query_id": "adv_D10",
+        "category": "ambiguous",
+        "query": "How are elections conducted?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_26_p45_c02",
+          "const_243z_p163_c01",
+          "const_243k_p155_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 243K)\n\n> \"243K. Elections to the Panchayats .\u2014(1) The superintendence, direction and control "
+      },
+      {
+        "query_id": "adv_D11",
+        "category": "ambiguous",
+        "query": "What is the qualification to be a member?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_190_p116_c01",
+          "const_84_p70_c01",
+          "const_93_p73_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 173)\n\n> \"173. Qualification for membership of the State Legislature .\u2014A person shall not be q"
+      },
+      {
+        "query_id": "adv_D12",
+        "category": "ambiguous",
+        "query": "What is the term of office?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_67_p62_c01",
+          "const_156_p101_c01",
+          "const_56_p58_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 67)\n\n> \"67. Term of office of Vice -President.\u2014The Vice -President shall hold office for a te"
+      },
+      {
+        "query_id": "adv_D13",
+        "category": "ambiguous",
+        "query": "How is a bill passed?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_196_p119_c03",
+          "const_196_p119_c02",
+          "const_200_p122_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 196)\n\n> \"(2) If after a Bill has been so passed for the second time by the Legislative Assemb"
+      },
+      {
+        "query_id": "adv_D14",
+        "category": "ambiguous",
+        "query": "What is the procedure for impeachment?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_61_p60_c01",
+          "const_61_p60_c02",
+          "const_208_p126_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 61)\n\n> \"61. Procedure for impeachment of the President .\u2014 (1) When a President is to be impea"
+      },
+      {
+        "query_id": "adv_D15",
+        "category": "ambiguous",
+        "query": "Who appoints the council of ministers?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_74_p65_c01",
+          "const_164_p103_c01",
+          "const_75_p65_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 74)\n\n> \"74. Council of Ministers to aid and advise President.\u20141[(1) There shall be a Council "
+      },
+      {
+        "query_id": "adv_D16",
+        "category": "ambiguous",
+        "query": "What are the rules regarding public service commissions?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_320_p211_c01",
+          "const_322_p213_c01",
+          "const_378_p281_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 315)\n\n> \"315. Public Service Commissions for the Union and for the States.\u2014 (1) Subject to th"
+      },
+      {
+        "query_id": "adv_D17",
+        "category": "ambiguous",
+        "query": "How is money bill defined?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_110_p81_c02",
+          "const_199_p121_c02",
+          "const_198_p120_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 110)\n\n> \"(2) A Bill shall not be deemed to be a Money Bill by reason only that it provides fo"
+      },
+      {
+        "query_id": "adv_D18",
+        "category": "ambiguous",
+        "query": "What is the power of superintendence?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_227_p136_c01",
+          "const_257_p180_c01",
+          "const_162_p103_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 227)\n\n> \"227. Power of superintendence over all courts by the High Court .\u2014 4[(1) Every High "
+      },
+      {
+        "query_id": "adv_D19",
+        "category": "ambiguous",
+        "query": "What are the official languages?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_345_p235_c01",
+          "const_343_p234_c02",
+          "const_343_p234_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 345)\n\n> \"345. Official language or languages of a State. \u2014Subject to the provisions of articl"
+      },
+      {
+        "query_id": "adv_D20",
+        "category": "ambiguous",
+        "query": "How are disputes regarding boundaries settled?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_3_p193_c01",
+          "const_19_p40_c01",
+          "const_2_p33_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 19)\n\n> \"19. Protection of certain rights regarding freedom of speech, etc.\u2014 (1) All citizens "
+      },
+      {
+        "query_id": "adv_E01",
+        "category": "unanswerable_out_of_domain",
+        "query": "What are the rules for filing patent applications under the US Patent Act?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_208_p126_c01",
+          "const_118_p86_c01",
+          "const_145_p96_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 208)\n\n> \"208. Rules of procedure .\u2014 (1) A House of the Legislature of a State may make rules "
+      },
+      {
+        "query_id": "adv_E02",
+        "category": "unanswerable_out_of_domain",
+        "query": "Write a Python script to implement binary search.",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_343_p234_c01",
+          "const_29_p46_c01",
+          "const_12_p37_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 275)\n\n> \"275. Grants from the Union to certain States .\u2014\"\n\n### Advanced Grounded Synthesis (H"
+      },
+      {
+        "query_id": "adv_E04",
+        "category": "unanswerable_out_of_domain",
+        "query": "What is the capital city of France and its population?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_334a_p224_c01",
+          "const_54_p57_c01",
+          "const_243p_p158_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 93)\n\n> \"93. The Speaker and Deputy Speaker of the House of the People. \u2014 The House of the Peo"
+      },
+      {
+        "query_id": "adv_E08",
+        "category": "unanswerable_out_of_domain",
+        "query": "What are the rules of the German Basic Law regarding the Federal Constitutional Court?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_371c_p268_c01",
+          "const_145_p96_c01",
+          "const_134a_p94_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 145)\n\n> \"145. Rules of Court, etc .\u2014(1) Subject to the provisions of any law made by Parliame"
+      },
+      {
+        "query_id": "adv_E10",
+        "category": "unanswerable_out_of_domain",
+        "query": "How does quantum superposition work in quantum mechanics?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_40_p53_c01",
+          "const_43_p53_c01",
+          "const_41_p350_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 41)\n\n> \"41. State public services; State Public Service Commission. 42. State pensions, that "
+      },
+      {
+        "query_id": "adv_E16",
+        "category": "unanswerable_current_affairs",
+        "query": "Who is the Prime Minister of India right now?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_75_p65_c01",
+          "const_77_p66_c02",
+          "const_74_p65_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 78)\n\n> \"The Coking Coal Mines (Nationalisation) Act, 1972 (Central Act 36 of 1972). 95. The G"
+      },
+      {
+        "query_id": "adv_E18",
+        "category": "unanswerable_current_affairs",
+        "query": "Name the current President of India.",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_115_p84_c01",
+          "const_1_p33_c01",
+          "const_77_p66_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 52)\n\n> \"52. The President of India.\u2014There shall be a President of India.\"\n\n### Advanced Groun"
+      },
+      {
+        "query_id": "adv_E19",
+        "category": "unanswerable_current_affairs",
+        "query": "Who won the recent Lok Sabha general election?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_243a_p150_c01",
+          "const_57_p59_c01",
+          "const_165_p105_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 165)\n\n> \"165. Advocate-General for the State. \u2014(1) The Governor of each State shall appoint a"
+      },
+      {
+        "query_id": "adv_E22",
+        "category": "unanswerable_corpus_limitation",
+        "query": "What fountain pen brand did Dr. B.R. Ambedkar use to draft the text?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_4_p258_c01",
+          "const_394a_p283_c01",
+          "const_343_p234_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 4)\n\n> \"4. See the Constitution (Declaration as to Foreign States) Order, 1950 (C.O. 2). 5. Ad"
+      },
+      {
+        "query_id": "adv_E23",
+        "category": "unanswerable_corpus_limitation",
+        "query": "How many pages does Chapter 99 of the Constitution contain?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_169_p107_c01",
+          "const_312_p206_c01",
+          "const_55_p57_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 99)\n\n> \"99. Oath or affirmation by members. \u2014Every member of either House of Parliament shall"
+      },
+      {
+        "query_id": "adv_E25",
+        "category": "unanswerable_corpus_limitation",
+        "query": "What does Schedule 25 of the Constitution say?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_25_p349_c01",
+          "const_334a_p224_c02",
+          "const_62_p361_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 25)\n\n> \"25. Gas and gas-works. 26. Trade and commerce within the State subject to the provisi"
+      },
+      {
+        "query_id": "adv_F06",
+        "category": "temporal_dynamic",
+        "query": "Did Parliament pass an amendment to Article 19 this morning?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_19_p40_c01",
+          "const_358_p246_c01",
+          "const_103_p77_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 19)\n\n> \"19. Protection of certain rights regarding freedom of speech, etc.\u2014 (1) All citizens "
+      },
+      {
+        "query_id": "adv_F07",
+        "category": "temporal_dynamic",
+        "query": "What dynamic changes were made to Article 370 in the news last month?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_370_p35_c01",
+          "const_352_p239_c02",
+          "const_196_p119_c03"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 370)\n\n> \"Article 370. Temporary provisions with respect to the State of Jammu and Kashmir (Se"
+      },
+      {
+        "query_id": "adv_F16",
+        "category": "temporal_dynamic",
+        "query": "Did the President sign a new amendment bill last night?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_2_p33_c01",
+          "const_111_p82_c01",
+          "const_201_p122_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 63)\n\n> \"63. The Vice-President of India.\u2014There shall be a Vice-President of India. 64. The Vi"
+      },
+      {
+        "query_id": "adv_G06",
+        "category": "long_context_stress",
+        "query": "In Article 352, what requirement was added for a written communication of the Cabinet decision?",
+        "pipeline": "advanced",
+        "failure_reason": "Citation entailment failed: Article 75 cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_352_p239_c01",
+          "const_352_p239_c02",
+          "const_345_p235_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 352)\n\n> \"352. Proclamation of Emergency. \u2014 (1) If the President is satisfied that a grave eme"
+      },
+      {
+        "query_id": "adv_G07",
+        "category": "long_context_stress",
+        "query": "Under Article 124(2), what is the retirement age specified for a Supreme Court judge?",
+        "pipeline": "advanced",
+        "failure_reason": "Citation entailment failed: Article 124A cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_124_p88_c01",
+          "const_124_p88_c04",
+          "const_124_p88_c03"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 124)\n\n> \"124. Establishment and constitution of the Supreme Court .\u2014 (1) There shall be a Sup"
+      },
+      {
+        "query_id": "adv_G08",
+        "category": "long_context_stress",
+        "query": "What is the minimum qualification period as High Court judge to be appointed to Supreme Court in Article 124(3)?",
+        "pipeline": "advanced",
+        "failure_reason": "Citation entailment failed: Article 124A cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_124_p88_c01",
+          "const_124_p88_c03",
+          "const_124_p88_c04"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 124)\n\n> \"124. Establishment and constitution of the Supreme Court .\u2014 (1) There shall be a Sup"
+      },
+      {
+        "query_id": "adv_G16",
+        "category": "long_context_stress",
+        "query": "What is the procedure for removal of a High Court judge under Article 217(1)(b)?",
+        "pipeline": "advanced",
+        "failure_reason": "Citation entailment failed: Article 124A cited in response was NOT retrieved in the supporting evidence pool",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_376_p280_c01",
+          "const_216_p130_c01",
+          "const_121_p87_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 222)\n\n> \"222. Transfer of a Judge from one High Court to another. \u2014(1) The President may, 1[o"
+      },
+      {
+        "query_id": "adv_H03",
+        "category": "conversational_memory",
+        "query": "give an example",
+        "pipeline": "advanced",
+        "failure_reason": "System falsely abstained: Please ask questions based on the Constitution of India domain only.",
+        "is_abstention": true,
+        "retrieved_chunks": [],
+        "answer_snippet": "**Insufficient Evidence / Out of Domain:**\nPlease ask questions based on the Constitution of India domain only."
+      },
+      {
+        "query_id": "adv_H07",
+        "category": "conversational_memory",
+        "query": "what were the exceptions?",
+        "pipeline": "advanced",
+        "failure_reason": "System falsely abstained: Please ask questions based on the Constitution of India domain only.",
+        "is_abstention": true,
+        "retrieved_chunks": [],
+        "answer_snippet": "**Insufficient Evidence / Out of Domain:**\nPlease ask questions based on the Constitution of India domain only."
+      },
+      {
+        "query_id": "adv_H08",
+        "category": "conversational_memory",
+        "query": "compare both of them",
+        "pipeline": "advanced",
+        "failure_reason": "System falsely abstained: Please ask questions based on the Constitution of India domain only.",
+        "is_abstention": true,
+        "retrieved_chunks": [],
+        "answer_snippet": "**Insufficient Evidence / Out of Domain:**\nPlease ask questions based on the Constitution of India domain only."
+      },
+      {
+        "query_id": "adv_H11",
+        "category": "conversational_memory",
+        "query": "in detail",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_356_p35_c01",
+          "const_243d_p152_c03",
+          "const_preamble_p32_c01"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 356)\n\n> \"Article 356. Provisions in case of failure of constitutional machinery in States (Pr"
+      },
+      {
+        "query_id": "adv_H15",
+        "category": "conversational_memory",
+        "query": "What is the capital of France?",
+        "pipeline": "advanced",
+        "failure_reason": "System failed to abstain on unanswerable/out-of-scope query",
+        "is_abstention": false,
+        "retrieved_chunks": [
+          "const_334a_p224_c01",
+          "const_54_p57_c01",
+          "const_275_p188_c02"
+        ],
+        "answer_snippet": "### Official Constitutional Provision (Article 93)\n\n> \"93. The Speaker and Deputy Speaker of the House of the People. \u2014 The House of the Peo"
+      }
+    ]
+  }
+}

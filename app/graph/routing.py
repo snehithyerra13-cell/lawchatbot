@@ -19,7 +19,7 @@ def route_classification(
     """Route after classify_question node."""
     intent = state.get("intent", "uncertain")
 
-    if intent == "cached_response":
+    if intent in ["cached_response", "false_premise_refutation"]:
         return "finalize_response"
 
     if intent in ["out_of_scope", "temporal_inquiry", "insufficient_evidence", "clarification_needed"]:

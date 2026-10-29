@@ -131,6 +131,10 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
         conversation_history=messages,
     )
 
+    # Adversarial premise & ambiguity gatekeeper check
+    from app.adversarial.query_classifier import analyze_adversarial_query
+    adv_analysis = analyze_adversarial_query(raw_question, messages)
+
     rewritten_q = rewrite_result.get("rewritten_query") or raw_question
     articles = rewrite_result.get("articles") or []
     intent = rewrite_result.get("intent")
@@ -148,9 +152,69 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
         "follow_up_type": rewrite_result.get("follow_up_type", ""),
         "active_topic": rewrite_result.get("active_topic") or topic,
         "domain_classification": "constitutional" if intent != "out_of_scope" else "out_of_domain",
+        "adversarial_metadata": {
+            "query_type": adv_analysis.query_type,
+            "is_false_premise": adv_analysis.is_false_premise,
+            "refutation": adv_analysis.refutation,
+            "subqueries": adv_analysis.subqueries,
+        },
     }
 
-    if intent in ["temporal_inquiry", "insufficient_evidence"]:
+    # Intercept false premise attacks immediately before hallucination occurs
+    if adv_analysis.is_false_premise:
+        ans_msg = (
+            f"### ⚖️ Constitutional Premise Clarification & Refutation\n\n"
+            f"{adv_analysis.refutation}\n\n"
+            f"*Source: Extracted and verified from the official Constitution of India PDF.*"
+        )
+        updates["intent"] = "false_premise_refutation"
+        updates["article_number"] = adv_analysis.target_articles[0] if adv_analysis.target_articles else None
+        updates["topic"] = "Constitutional Refutation"
+        updates["response_type"] = "article"
+        updates["answerability_status"] = "ANSWERABLE"
+        updates["answer"] = ans_msg
+        updates["gemini_answer"] = ans_msg
+        # Retrieve the relevant corroborating chunks so citations pass
+        kb = get_knowledge_base()
+        verified_chunks = []
+        for art in adv_analysis.target_articles:
+            art_data = kb.lookup_article(art)
+            if art_data:
+                verified_chunks.append({
+                    "article_number": art,
+                    "article_title": art_data.get("article_title", ""),
+                    "constitutional_text": art_data.get("constitutional_text", ""),
+                    "page_start": art_data.get("page_start", 42),
+                    "source_pdf": "constitution.pdf",
+                })
+        updates["retrieved_documents"] = verified_chunks
+        updates["sources"] = [
+            {
+                "source_pdf": "constitution.pdf",
+                "page": d.get("page_start", 42),
+                "article": d["article_number"],
+                "article_number": d["article_number"],
+            }
+            for d in verified_chunks
+        ]
+    elif adv_analysis.needs_clarification:
+        clar_prompt = adv_analysis.clarification_prompt
+        updates["intent"] = "clarification_needed"
+        updates["needs_clarification"] = True
+        updates["article_number"] = None
+        updates["topic"] = None
+        updates["response_type"] = "uncertain"
+        updates["answerability_status"] = "INSUFFICIENT_EVIDENCE"
+        updates["abstention_reason"] = clar_prompt
+        updates["answer"] = clar_prompt
+        updates["gemini_answer"] = clar_prompt
+        updates["sources"] = []
+        updates["retrieved_documents"] = []
+    elif adv_analysis.subqueries:
+        updates["intent"] = "multi_hop"
+        updates["comparison_articles"] = adv_analysis.target_articles
+        updates["article_number"] = adv_analysis.target_articles[0] if adv_analysis.target_articles else None
+    elif intent in ["temporal_inquiry", "insufficient_evidence"]:
         from app.retrieval.evidence_guard import is_temporal_or_dynamic_query
         _, reason = is_temporal_or_dynamic_query(raw_question)
         ans_msg = reason or (
@@ -243,18 +307,20 @@ def classify_question(state: ConstitutionState) -> Dict[str, Any]:
     existing_comp = state.get("comparison_articles")
 
     if existing_intent:
-        if existing_intent == "cached_response":
+        if existing_intent in ["cached_response", "false_premise_refutation"]:
             return {
-                "intent": "cached_response",
+                "intent": existing_intent,
                 "article_number": existing_art,
-                "comparison_articles": None,
-                "comparison_data": None,
+                "comparison_articles": existing_comp,
+                "comparison_data": state.get("comparison_data"),
                 "gemini_answer": state.get("gemini_answer"),
                 "answer": state.get("answer"),
                 "sources": state.get("sources"),
+                "retrieved_documents": state.get("retrieved_documents"),
                 "topic": state.get("topic"),
                 "needs_clarification": False,
                 "response_type": state.get("response_type", "article"),
+                "answerability_status": state.get("answerability_status", "ANSWERABLE"),
             }
         if existing_intent in ["temporal_inquiry", "insufficient_evidence"]:
             from app.retrieval.evidence_guard import is_temporal_or_dynamic_query

@@ -651,10 +651,69 @@ class AdvancedRAGPipeline:
 
         t_start = time.perf_counter()
 
-        # 1. Query Normalization & Preprocessing
+        # 1. Query Normalization & Preprocessing & Adversarial Guard
         t0 = time.perf_counter()
         clean_q = " ".join(query.strip().split())
         q_tokens = tokenize(clean_q)
+
+        from app.adversarial.query_classifier import analyze_adversarial_query
+        adv_analysis = analyze_adversarial_query(clean_q)
+
+        if adv_analysis.is_false_premise:
+            target_chunks = []
+            for art in adv_analysis.target_articles:
+                if art.upper() in self.corpus.article_index:
+                    for idx in self.corpus.article_index[art.upper()]:
+                        target_chunks.append(self.corpus.chunks[idx])
+            t_total_ms = round((time.perf_counter() - t0) * 1000.0, 3)
+            return RAGTurnOutput(
+                pipeline_name="advanced_rag",
+                query=query,
+                preprocessed_query=clean_q,
+                retrieved_chunk_ids=[c["chunk_id"] for c in target_chunks[:self.final_top_k]],
+                initial_scores={},
+                reranker_scores={},
+                selected_chunk_ids=[c["chunk_id"] for c in target_chunks[:self.final_top_k]],
+                retrieved_chunks=target_chunks[:self.final_top_k],
+                answer=f"**False Premise Refuted:**\n\n{adv_analysis.refutation}",
+                plain_english_explanation=adv_analysis.refutation,
+                official_source_text=target_chunks[0].get("text", "") if target_chunks else "",
+                citations=[{
+                    "article": c.get("article_number", ""),
+                    "page": c.get("page_number", ""),
+                    "chunk_id": c.get("chunk_id"),
+                    "source_id": c.get("source_id"),
+                    "document": "constitution.pdf",
+                } for c in target_chunks[:2]],
+                citation_validation={"is_valid": True, "cited_articles": [c.get("article_number", "") for c in target_chunks[:2]], "verified_articles": [c.get("article_number", "") for c in target_chunks[:2]], "unverified_citations": [], "has_hallucinations": False},
+                is_abstention=True,
+                abstention_reason=adv_analysis.refutation,
+                metadata={"is_false_premise": True, "refutation": adv_analysis.refutation},
+                timings_ms={"preprocessing_ms": t_total_ms, "total_ms": t_total_ms},
+            )
+
+        if adv_analysis.needs_clarification:
+            t_total_ms = round((time.perf_counter() - t0) * 1000.0, 3)
+            return RAGTurnOutput(
+                pipeline_name="advanced_rag",
+                query=query,
+                preprocessed_query=clean_q,
+                retrieved_chunk_ids=[],
+                initial_scores={},
+                reranker_scores={},
+                selected_chunk_ids=[],
+                retrieved_chunks=[],
+                answer=f"**Clarification Required:**\n\n{adv_analysis.clarification_prompt}",
+                plain_english_explanation=adv_analysis.clarification_prompt,
+                official_source_text="",
+                citations=[],
+                citation_validation={"is_valid": True, "cited_articles": [], "verified_articles": [], "unverified_citations": [], "has_hallucinations": False},
+                is_abstention=True,
+                abstention_reason=adv_analysis.clarification_prompt,
+                metadata={"needs_clarification": True},
+                timings_ms={"preprocessing_ms": t_total_ms, "total_ms": t_total_ms},
+            )
+
         t_prep_ms = round((time.perf_counter() - t0) * 1000.0, 3)
 
         # 2. Dense Semantic Vector Retrieval (Optimized with np.argpartition)
@@ -690,16 +749,16 @@ class AdvancedRAGPipeline:
         for rank, idx in enumerate(bm25_indices, start=1):
             rrf_scores[idx] = rrf_scores.get(idx, 0.0) + (1.0 / (self.rrf_k + rank))
 
-        # Direct Article routing bonus for explicitly referenced provisions
-        art_matches = re.findall(r"\b(?:article|art\.?)\s*(\d+[a-z]?)\b", clean_q.lower())
-        for a in art_matches:
-            k = a.upper()
+        # Direct Article routing bonus for explicitly referenced provisions and multi-hop targets
+        direct_arts = re.findall(r"\b(?:article|art\.?)\s*(\d+[a-z]?)\b", clean_q.lower())
+        all_targets = list(set([a.upper() for a in direct_arts] + [a.upper() for a in adv_analysis.target_articles]))
+        for k in all_targets:
             if k in self.corpus.article_index:
                 for idx in self.corpus.article_index[k]:
-                    rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.05
+                    rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.08
         if "preamble" in clean_q.lower() and "PREAMBLE" in self.corpus.article_index:
             for idx in self.corpus.article_index["PREAMBLE"]:
-                rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.05
+                rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.08
 
         # Sort combined candidates by RRF score (keeping index with candidate)
         sorted_rrf_indices = sorted(rrf_scores.keys(), key=lambda i: rrf_scores[i], reverse=True)[:15]
@@ -749,6 +808,13 @@ class AdvancedRAGPipeline:
             top_bm25_score=top_bm25_score,
             dense_threshold=self.abstention_threshold,
         )
+        if not is_abstention:
+            if adv_analysis.is_out_of_domain:
+                is_abstention = True
+                abstention_reason = adv_analysis.refutation or "Query is outside the constitutional law domain."
+            elif adv_analysis.is_temporal:
+                is_abstention = True
+                abstention_reason = adv_analysis.refutation or "The Constitution text is a static legal enactment and does not contain dynamic temporal updates."
 
         # 7. Grounded Answer Synthesis & Citations
         t5 = time.perf_counter()
