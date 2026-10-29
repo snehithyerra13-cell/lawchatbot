@@ -1213,6 +1213,11 @@ with st.sidebar:
         st.markdown(f"**Active Pipeline:** `{rag_mode_display} RAG`")
         st.caption("Select your RAG architecture from the main bar above: Advanced RAG (Hybrid RRF + Cross-Rerank), Normal RAG (Vector Baseline), or Compare Pipelines.")
 
+    # Feature: Cost Optimization & Observability Dashboard
+    with st.expander("💰 Cost Optimization & Performance", expanded=False):
+        from app.cost.dashboard import render_cost_optimization_dashboard
+        render_cost_optimization_dashboard()
+
     with st.expander("🔑 Gemini API Settings", expanded=False):
         api_key_val = st.text_input(
             "Gemini API Key",

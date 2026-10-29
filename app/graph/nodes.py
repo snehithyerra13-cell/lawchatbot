@@ -969,43 +969,62 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
             gemini_ans = None
             gemini_diagnostic = {"success": True, "status_code": 200, "note": "rule_based_engine_selected"}
         else:
-            try:
-                # Query Mem0 for user context and persistent preferences
-                mem0_svc = get_mem0_service()
-                if not mem0_memories:
-                    mem0_memories = mem0_svc.search_memories(
-                        query=state.get("question", ""),
-                        user_id=user_id,
-                        limit=4,
-                    )
-            except Exception as e_mem:
-                logger.warning("Mem0 retrieval warning: %s", e_mem)
-                mem0_memories = []
-
-            try:
-                from app.retrieval.gemini_service import generate_gemini_with_diagnostics
-
-                diag_res = generate_gemini_with_diagnostics(
-                    question=state.get("question", ""),
-                    retrieved_docs=state.get("retrieved_documents", []),
-                    conversation_history=state.get("messages", []),
-                    comparison_data=state.get("comparison_data"),
-                    topic=state.get("topic"),
-                    user_memories=mem0_memories,
-                )
-                gemini_ans = diag_res.text
-                gemini_diagnostic = diag_res.to_dict()
-            except Exception as e:
-                logger.warning("Fault tolerance fallback: Gemini synthesis error: %s", e)
-                gemini_ans = (
-                    f"⚠️ *Gemini AI synthesis encountered an error: {e}. "
-                    "The deterministic rule-based analysis remains 100% verified against your local Constitution PDF.*"
-                )
+            # Semantic & Exact Cache Probe before external API call
+            from app.cache.semantic_cache import get_semantic_cache
+            sem_cache = get_semantic_cache()
+            clean_q = state.get("raw_question") or state.get("question", "")
+            cache_res = sem_cache.lookup(query=clean_q, chatbot_mode="gemini", user_id=user_id)
+            if cache_res.hit and cache_res.response_payload and cache_res.response_payload.get("gemini_answer"):
+                gemini_ans = cache_res.response_payload["gemini_answer"]
                 gemini_diagnostic = {
-                    "success": False,
-                    "error_type": "exception",
-                    "provider_message": str(e),
+                    "success": True,
+                    "status_code": 200,
+                    "model_used": "semantic_cache",
+                    "note": f"cache_hit_{cache_res.cache_type}",
+                    "prompt_tokens": 0,
+                    "output_tokens": 0,
+                    "total_tokens": 0,
+                    "duration_seconds": cache_res.latency_ms / 1000.0,
                 }
+                logger.info("LangGraph Gemini synthesis bypassed via %s cache hit!", cache_res.cache_type)
+            else:
+                try:
+                    # Query Mem0 for user context and persistent preferences
+                    mem0_svc = get_mem0_service()
+                    if not mem0_memories:
+                        mem0_memories = mem0_svc.search_memories(
+                            query=state.get("question", ""),
+                            user_id=user_id,
+                            limit=4,
+                        )
+                except Exception as e_mem:
+                    logger.warning("Mem0 retrieval warning: %s", e_mem)
+                    mem0_memories = []
+
+                try:
+                    from app.retrieval.gemini_service import generate_gemini_with_diagnostics
+
+                    diag_res = generate_gemini_with_diagnostics(
+                        question=state.get("question", ""),
+                        retrieved_docs=state.get("retrieved_documents", []),
+                        conversation_history=state.get("messages", []),
+                        comparison_data=state.get("comparison_data"),
+                        topic=state.get("topic"),
+                        user_memories=mem0_memories,
+                    )
+                    gemini_ans = diag_res.text
+                    gemini_diagnostic = diag_res.to_dict()
+                except Exception as e:
+                    logger.warning("Fault tolerance fallback: Gemini synthesis error: %s", e)
+                    gemini_ans = (
+                        f"⚠️ *Gemini AI synthesis encountered an error: {e}. "
+                        "The deterministic rule-based analysis remains 100% verified against your local Constitution PDF.*"
+                    )
+                    gemini_diagnostic = {
+                        "success": False,
+                        "error_type": "exception",
+                        "provider_message": str(e),
+                    }
 
     return {
         "gemini_answer": gemini_ans,
@@ -1109,8 +1128,70 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
         except Exception as mem_err:
             logger.debug("Mem0 auto-record skipped: %s", mem_err)
 
+    # Telemetry and Semantic Cache Recording (100% Background Execution)
+    def _bg_record_cost_and_cache() -> None:
+        try:
+            from app.cache.semantic_cache import get_semantic_cache
+            from app.cost.cost_tracker import RequestCostRecord, get_cost_tracker
+            import uuid
+
+            cost_tracker = get_cost_tracker()
+            sem_cache = get_semantic_cache()
+
+            clean_q = state.get("raw_question") or state.get("question", "")
+            diag = state.get("gemini_diagnostic") or {}
+
+            p_tokens = diag.get("prompt_tokens", 0)
+            o_tokens = diag.get("output_tokens", 0)
+            cost_val, cost_status = cost_tracker.calculate_cost(
+                input_tokens=p_tokens,
+                output_tokens=o_tokens,
+                chatbot_mode=choice,
+            )
+
+            diag_note = str(diag.get("note", ""))
+            is_cache_hit = "exact" if "cache_hit_exact" in diag_note else (
+                "semantic" if "cache_hit_semantic" in diag_note else "miss"
+            )
+
+            rec = RequestCostRecord(
+                request_id=f"req_{uuid.uuid4().hex[:8]}",
+                session_id=str(state.get("user_id") or "default_session"),
+                user_id=str(state.get("user_id") or "default_user"),
+                chatbot_mode=choice,
+                llm_input_tokens=p_tokens,
+                llm_output_tokens=o_tokens,
+                llm_generation_latency_ms=diag.get("duration_seconds", 0.0) * 1000.0,
+                total_latency_ms=(exec_time or 0.1) * 1000.0,
+                retry_count=diag.get("retry_count", 0),
+                failed_api_calls=1 if diag.get("success") is False else 0,
+                cache_hit=is_cache_hit,
+                estimated_cost_usd=cost_val,
+                cost_status=cost_status,
+            )
+            cost_tracker.record_request(rec)
+
+            # Store in semantic cache if Gemini succeeded and valid
+            if diag.get("success") and gemini_ans and is_cache_hit == "miss":
+                sem_cache.store(
+                    query=clean_q,
+                    response_payload={
+                        "answer": rule_ans,
+                        "gemini_answer": gemini_ans,
+                        "sources": sources,
+                        "response_type": response_type,
+                    },
+                    chatbot_mode="gemini",
+                    user_id=str(state.get("user_id") or "default_user"),
+                    target_article=state.get("article_number") or state.get("last_discussed_article"),
+                    is_valid=True,
+                )
+        except Exception as ex:
+            logger.debug("Cost & cache recording exception: %s", ex)
+
     import threading
     threading.Thread(target=_bg_save_mem0, daemon=True).start()
+    threading.Thread(target=_bg_record_cost_and_cache, daemon=True).start()
 
     return {
         "messages": [ai_msg],

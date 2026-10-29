@@ -47,6 +47,9 @@ class GeminiDiagnosticResult:
     retry_count: int = 0
     duration_seconds: float = 0.0
     user_friendly_message: str = ""
+    prompt_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -380,13 +383,14 @@ def execute_gemini_request_with_diagnostics(
         for attempt in range(max_retries_per_model + 1):
             t_req_start = time.perf_counter()
             try:
+                settings = get_settings()
                 resp = session.post(
                     url,
                     json={
                         "contents": [{"parts": [{"text": prompt}]}],
                         "generationConfig": {
                             "temperature": 0.2,
-                            "maxOutputTokens": 800,
+                            "maxOutputTokens": settings.max_output_tokens,
                             "topP": 0.9,
                         },
                     },
@@ -403,6 +407,17 @@ def execute_gemini_request_with_diagnostics(
                             if parts and "text" in parts[0]:
                                 raw_ans = parts[0]["text"].strip()
                                 cleaned = clean_gemini_response(raw_ans)
+                                
+                                # Extract provider usageMetadata if available
+                                usage = data.get("usageMetadata", {})
+                                p_tokens = usage.get("promptTokenCount")
+                                o_tokens = usage.get("candidatesTokenCount")
+                                if p_tokens is None:
+                                    p_tokens = len(prompt.split()) * 4 // 3
+                                if o_tokens is None:
+                                    o_tokens = len(raw_ans.split()) * 4 // 3
+                                tot_tokens = usage.get("totalTokenCount", p_tokens + o_tokens)
+
                                 diag = GeminiDiagnosticResult(
                                     success=True,
                                     text=cleaned,
@@ -412,6 +427,9 @@ def execute_gemini_request_with_diagnostics(
                                     retry_count=total_retries,
                                     duration_seconds=round(time.perf_counter() - t_global_start, 3),
                                     user_friendly_message="",
+                                    prompt_tokens=int(p_tokens),
+                                    output_tokens=int(o_tokens),
+                                    total_tokens=int(tot_tokens),
                                 )
                                 _LAST_DIAGNOSTIC = diag
                                 return diag

@@ -1,0 +1,20 @@
+{
+  "manifest_version": "1.0",
+  "model": "tfidf-sublinear-l2",
+  "updated_at": "2026-10-29T06:42:07.481015+00:00",
+  "total_chunks": 2,
+  "chunks": {
+    "test_chunk_01": {
+      "content_hash": "506d88f6559df999540ef0265619c1bf42ab1943999db275aa8e7653557842f0",
+      "article_number": "14",
+      "page_number": 37,
+      "section": "Equality"
+    },
+    "test_chunk_02": {
+      "content_hash": "0b4a040f766a4630fd1a23613cebd5293e109eab50261882be47050a90141b0d",
+      "article_number": "21",
+      "page_number": 42,
+      "section": "Life and Liberty"
+    }
+  }
+}

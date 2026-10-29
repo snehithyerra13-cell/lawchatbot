@@ -106,15 +106,14 @@ class SharedConstitutionalCorpus:
         ]
         self.tokenized_corpus: List[List[str]] = [tokenize(t) for t in self.corpus_texts]
 
-        # 1. Vector Space Model (TF-IDF with sublinear scaling, unigrams+bigrams, L2 normalized)
-        self.vectorizer = TfidfVectorizer(
-            sublinear_tf=True,
-            ngram_range=(1, 2),
-            min_df=1,
-            norm="l2",
-        )
-        self.tfidf_matrix = self.vectorizer.fit_transform(self.corpus_texts)
+        # 1. Vector Space Model with Incremental Hashing & Persistence
+        from app.retrieval.incremental_indexer import get_incremental_indexer
+        indexer = get_incremental_indexer()
+        report, vec, matrix = indexer.run_indexing(chunks=self.chunks)
+        self.vectorizer = vec
+        self.tfidf_matrix = matrix
         self.embedding_dimension = self.tfidf_matrix.shape[1]
+        self.indexing_report = report
 
         # 2. Lexical BM25 Index
         self.bm25 = BM25Okapi(self.tokenized_corpus)
@@ -127,10 +126,25 @@ class SharedConstitutionalCorpus:
                 self.article_index.setdefault(art_no, []).append(idx)
 
         logger.info(
-            "SharedConstitutionalCorpus initialized: %d chunks, vector dim=%d, BM25 ready",
+            "SharedConstitutionalCorpus initialized: %d chunks, vector dim=%d, BM25 ready (status: %s, %d reused)",
             len(self.chunks),
             self.embedding_dimension,
+            report.status,
+            report.reused_count,
         )
+
+    @classmethod
+    def reindex(cls, force: bool = True) -> Any:
+        """Trigger on-demand incremental or full reindexing of the shared corpus."""
+        from app.retrieval.incremental_indexer import get_incremental_indexer
+        indexer = get_incremental_indexer()
+        instance = cls.get_instance()
+        report, vec, matrix = indexer.run_indexing(force_reindex=force, chunks=instance.chunks)
+        instance.vectorizer = vec
+        instance.tfidf_matrix = matrix
+        instance.embedding_dimension = matrix.shape[1]
+        instance.indexing_report = report
+        return report
 
     @classmethod
     def get_instance(cls) -> SharedConstitutionalCorpus:
@@ -305,6 +319,59 @@ class NormalRAGPipeline:
             cached_copy.timings_ms["total_ms"] = 0.05
             return cached_copy
 
+        # Tier A & B Persistent Semantic & Exact Cache Probe
+        from app.cache.semantic_cache import get_semantic_cache
+        from app.cost.cost_tracker import RequestCostRecord, get_cost_tracker
+        import uuid
+
+        clean_q = " ".join(query.strip().split())
+        sem_cache = get_semantic_cache()
+        cost_tracker = get_cost_tracker()
+
+        q_vec = self.corpus.vectorizer.transform([clean_q]).toarray().flatten()
+        cache_probe = sem_cache.lookup(query=clean_q, chatbot_mode="normal_rag", query_vector=q_vec)
+        if cache_probe.hit and cache_probe.response_payload:
+            payload = cache_probe.response_payload
+            cached_out = RAGTurnOutput(
+                pipeline_name="normal_rag",
+                query=query,
+                preprocessed_query=clean_q,
+                retrieved_chunk_ids=payload.get("retrieved_chunk_ids", []),
+                initial_scores=payload.get("initial_scores", {}),
+                reranker_scores={},
+                selected_chunk_ids=payload.get("selected_chunk_ids", []),
+                retrieved_chunks=payload.get("retrieved_chunks", []),
+                answer=payload.get("answer", ""),
+                plain_english_explanation=payload.get("plain_english_explanation", ""),
+                official_source_text=payload.get("official_source_text", ""),
+                citations=payload.get("citations", []),
+                citation_validation=payload.get("citation_validation", {}),
+                is_abstention=payload.get("is_abstention", False),
+                abstention_reason=payload.get("abstention_reason", ""),
+                timings_ms={
+                    "preprocessing_ms": 0.01,
+                    "retrieval_ms": 0.0,
+                    "generation_ms": 0.0,
+                    "total_ms": max(0.05, cache_probe.latency_ms),
+                    "cached": True,
+                },
+                metadata={
+                    "cache_hit": cache_probe.cache_type,
+                    "similarity": cache_probe.similarity_score,
+                    "model": "Cached-Normal-RAG",
+                },
+            )
+            cost_tracker.record_request(
+                RequestCostRecord(
+                    request_id=f"rag_norm_{uuid.uuid4().hex[:8]}",
+                    chatbot_mode="normal_rag",
+                    total_latency_ms=cache_probe.latency_ms,
+                    cache_hit=cache_probe.cache_type,
+                    cost_status="zero_local_rule_based",
+                )
+            )
+            return cached_out
+
         t_start = time.perf_counter()
 
         # 1. Preprocessing
@@ -409,6 +476,38 @@ class NormalRAGPipeline:
             },
         )
         _GLOBAL_RAG_CACHE.put(query, out, pipeline_name="normal_rag")
+
+        # Persist to SemanticCache and record telemetry
+        if not is_abstention and cite_res.is_valid:
+            sem_cache.store(
+                query=clean_q,
+                response_payload={
+                    "retrieved_chunk_ids": retrieved_chunk_ids,
+                    "selected_chunk_ids": retrieved_chunk_ids[:3],
+                    "retrieved_chunks": retrieved_chunks[:3],
+                    "answer": answer,
+                    "plain_english_explanation": explanation,
+                    "official_source_text": official_text,
+                    "citations": citations,
+                    "citation_validation": asdict(cite_res),
+                    "is_abstention": False,
+                    "abstention_reason": "",
+                },
+                chatbot_mode="normal_rag",
+                query_vector=q_vec,
+                target_article=primary_chunk.get("article_number") if not is_abstention else None,
+            )
+
+        cost_tracker.record_request(
+            RequestCostRecord(
+                request_id=f"rag_norm_{uuid.uuid4().hex[:8]}",
+                chatbot_mode="normal_rag",
+                vector_retrieval_latency_ms=t_ret_ms,
+                total_latency_ms=t_total_ms,
+                cache_hit="miss",
+                cost_status="zero_local_rule_based",
+            )
+        )
         return out
 
 
@@ -443,6 +542,62 @@ class AdvancedRAGPipeline:
             cached_copy.timings_ms["cached"] = True
             cached_copy.timings_ms["total_ms"] = 0.05
             return cached_copy
+
+        # Tier A & B Persistent Semantic & Exact Cache Probe
+        from app.cache.semantic_cache import get_semantic_cache
+        from app.cost.cost_tracker import RequestCostRecord, get_cost_tracker
+        import uuid
+
+        clean_q = " ".join(query.strip().split())
+        sem_cache = get_semantic_cache()
+        cost_tracker = get_cost_tracker()
+
+        q_vec = self.corpus.vectorizer.transform([clean_q]).toarray().flatten()
+        cache_probe = sem_cache.lookup(query=clean_q, chatbot_mode="advanced_rag", query_vector=q_vec)
+        if cache_probe.hit and cache_probe.response_payload:
+            payload = cache_probe.response_payload
+            cached_out = RAGTurnOutput(
+                pipeline_name="advanced_rag",
+                query=query,
+                preprocessed_query=clean_q,
+                retrieved_chunk_ids=payload.get("retrieved_chunk_ids", []),
+                initial_scores=payload.get("initial_scores", {}),
+                reranker_scores=payload.get("reranker_scores", {}),
+                selected_chunk_ids=payload.get("selected_chunk_ids", []),
+                retrieved_chunks=payload.get("retrieved_chunks", []),
+                answer=payload.get("answer", ""),
+                plain_english_explanation=payload.get("plain_english_explanation", ""),
+                official_source_text=payload.get("official_source_text", ""),
+                citations=payload.get("citations", []),
+                citation_validation=payload.get("citation_validation", {}),
+                is_abstention=payload.get("is_abstention", False),
+                abstention_reason=payload.get("abstention_reason", ""),
+                timings_ms={
+                    "preprocessing_ms": 0.01,
+                    "dense_retrieval_ms": 0.0,
+                    "bm25_retrieval_ms": 0.0,
+                    "fusion_ms": 0.0,
+                    "reranking_ms": 0.0,
+                    "generation_ms": 0.0,
+                    "total_ms": max(0.05, cache_probe.latency_ms),
+                    "cached": True,
+                },
+                metadata={
+                    "cache_hit": cache_probe.cache_type,
+                    "similarity": cache_probe.similarity_score,
+                    "model": "Cached-Advanced-RAG",
+                },
+            )
+            cost_tracker.record_request(
+                RequestCostRecord(
+                    request_id=f"rag_adv_{uuid.uuid4().hex[:8]}",
+                    chatbot_mode="advanced_rag",
+                    total_latency_ms=cache_probe.latency_ms,
+                    cache_hit=cache_probe.cache_type,
+                    cost_status="zero_local_rule_based",
+                )
+            )
+            return cached_out
 
         t_start = time.perf_counter()
 
@@ -501,27 +656,37 @@ class AdvancedRAGPipeline:
         candidate_entries = [(idx, self.corpus.chunks[idx]) for idx in sorted_rrf_indices]
         t_fusion_ms = round((time.perf_counter() - t3) * 1000.0, 3)
 
-        # 5. Cross-Encoder Reranking (O(1) dictionary lookups, eliminating O(N) list scans)
+        # 5. Cross-Encoder Reranking (Selective / Configurable)
         t4 = time.perf_counter()
+        settings = get_settings()
         reranked_scores: Dict[str, float] = {}
         scored_candidates: List[Tuple[float, Dict[str, Any]]] = []
 
-        for idx, ch in candidate_entries:
-            # Map chunk fields to format expected by reranker
-            art_dict = {
-                "article_number": ch.get("article_number", ""),
-                "article_title": ch.get("section", ""),
-                "constitutional_text": ch.get("text", ""),
-                "part": ch.get("metadata", {}).get("part", ""),
-            }
-            s, _ = compute_heuristic_rerank_score(clean_q, art_dict)
-            # Incorporate RRF signal directly using index
-            combined_score = s + (rrf_scores.get(idx, 0.0) * 200.0)
-            reranked_scores[ch["chunk_id"]] = float(round(combined_score, 2))
-            scored_candidates.append((combined_score, ch))
+        if settings.reranking_enabled:
+            for idx, ch in candidate_entries:
+                # Map chunk fields to format expected by reranker
+                art_dict = {
+                    "article_number": ch.get("article_number", ""),
+                    "article_title": ch.get("section", ""),
+                    "constitutional_text": ch.get("text", ""),
+                    "part": ch.get("metadata", {}).get("part", ""),
+                }
+                s, _ = compute_heuristic_rerank_score(clean_q, art_dict)
+                # Incorporate RRF signal directly using index
+                combined_score = s + (rrf_scores.get(idx, 0.0) * 200.0)
+                reranked_scores[ch["chunk_id"]] = float(round(combined_score, 2))
+                scored_candidates.append((combined_score, ch))
 
-        scored_candidates.sort(key=lambda x: x[0], reverse=True)
-        final_chunks = [c for _, c in scored_candidates[: self.final_top_k]]
+            scored_candidates.sort(key=lambda x: x[0], reverse=True)
+            final_chunks = [c for _, c in scored_candidates[: self.final_top_k]]
+        else:
+            # Low-cost bypass: preserve RRF ordering without reranker overhead
+            for idx, ch in candidate_entries[: self.final_top_k]:
+                score = float(round(rrf_scores.get(idx, 0.0) * 100.0, 2))
+                reranked_scores[ch["chunk_id"]] = score
+                scored_candidates.append((score, ch))
+            final_chunks = [c for _, c in scored_candidates[: self.final_top_k]]
+
         final_chunk_ids = [c["chunk_id"] for c in final_chunks]
         t_rerank_ms = round((time.perf_counter() - t4) * 1000.0, 3)
 
@@ -632,4 +797,38 @@ class AdvancedRAGPipeline:
             },
         )
         _GLOBAL_RAG_CACHE.put(query, out, pipeline_name="advanced_rag")
+
+        # Persist to SemanticCache and record telemetry
+        if not is_abstention and cite_res.is_valid:
+            sem_cache.store(
+                query=clean_q,
+                response_payload={
+                    "retrieved_chunk_ids": out.retrieved_chunk_ids,
+                    "selected_chunk_ids": final_chunk_ids,
+                    "retrieved_chunks": final_chunks,
+                    "answer": answer,
+                    "plain_english_explanation": explanation,
+                    "official_source_text": official_text,
+                    "citations": citations,
+                    "citation_validation": asdict(cite_res),
+                    "is_abstention": False,
+                    "abstention_reason": "",
+                    "reranker_scores": reranked_scores,
+                },
+                chatbot_mode="advanced_rag",
+                query_vector=q_vec,
+                target_article=primary_chunk.get("article_number") if not is_abstention else None,
+            )
+
+        cost_tracker.record_request(
+            RequestCostRecord(
+                request_id=f"rag_adv_{uuid.uuid4().hex[:8]}",
+                chatbot_mode="advanced_rag",
+                vector_retrieval_latency_ms=t_dense_ms,
+                reranking_latency_ms=t_rerank_ms,
+                total_latency_ms=t_total_ms,
+                cache_hit="miss",
+                cost_status="zero_local_rule_based",
+            )
+        )
         return out

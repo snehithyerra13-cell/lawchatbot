@@ -126,6 +126,77 @@ The application will open in your default browser at `http://localhost:8501`.
 
 ---
 
+## 💰 Production-Ready RAG Cost Optimization Module
+
+ConstitutionGPT includes an enterprise-grade cost optimization and telemetry engine that slashes LLM token consumption and retrieval latency without reducing constitutional legal accuracy or grounded citations:
+
+### Key Cost-Saving Pillars:
+1. **Real-Time Cost Observability (`app/cost/cost_tracker.py`):**
+   - SQLite persistent telemetry (`data/cost_telemetry.db`).
+   - Tracks actual input/output tokens, latency breakdown (retrieval, reranking, generation), cache hit status, retries, and estimated USD cost.
+   - Computes: $\text{LLM Cost} = \left(\frac{\text{Input Tokens}}{1,000,000} \times P_{\text{in}}\right) + \left(\frac{\text{Output Tokens}}{1,000,000} \times P_{\text{out}}\right)$.
+   - Configurable provider pricing (default Gemini Flash: \$0.075 / 1M input, \$0.30 / 1M output).
+   - Zero-cost computation for deterministic rule-based lookups.
+
+2. **Incremental Document Indexing (`app/retrieval/incremental_indexer.py`):**
+   - Content hash fingerprinting (SHA-256) per chunk.
+   - Vector persistence in `data/indexes/` and manifest tracking in `data/indexes/indexing_manifest.json`.
+   - Re-embeds ONLY newly added or modified articles; unchanged documents achieve 100% vector reuse with zero redundant computation.
+   - Explicit on-demand reindexing trigger.
+
+3. **Two-Tier Semantic Caching with Legal Safeguards (`app/cache/semantic_cache.py`):**
+   - **Tier A (Exact Query):** Conservative normalized query matching (< 0.05ms response time).
+   - **Tier B (Semantic Query):** Cosine vector similarity ($\ge 0.88$ threshold).
+   - **Constitutional Legal Safeguard:** Strictly enforces article identity matching (e.g. an Article 14 question will NEVER reuse an Article 21 cached answer, eliminating legal crosstalk).
+   - Invalidation on document/corpus modifications or TTL expiration (default 24 hours).
+   - Disallows caching of unverified claims, errors, or insufficient-evidence abstentions.
+
+4. **Configurable Retrieval & Chunk Deduplication (`app/retrieval/dual_pipeline.py`):**
+   - Centralized `top_k` and `rerank_top_k` settings.
+   - Hash-based chunk deduplication prevents feeding redundant token overlaps to the generation model.
+
+5. **Selective Reranking:**
+   - Modular cross-encoder reranker can be toggled on/off. In latency-sensitive or low-cost scenarios, candidates bypass reranking and follow hybrid RRF ranks directly.
+
+6. **Token-Budgeting & Bounded Retries (`app/retrieval/gemini_service.py`):**
+   - Concise prompt templates with verbatim statutory context.
+   - Enforced `max_output_tokens` limits (default 800).
+   - Bounded exponential backoff with jitter on network retries.
+
+---
+
+## ⚙️ Configuration Variables & Defaults
+
+| Environment Variable | Default Value | Description |
+| :--- | :---: | :--- |
+| `COST_TRACKING_ENABLED` | `true` | Enables persistent SQLite request cost telemetry |
+| `EXACT_CACHE_ENABLED` | `true` | Enables Tier A exact query matching cache |
+| `SEMANTIC_CACHE_ENABLED` | `true` | Enables Tier B semantic cosine similarity cache |
+| `SEMANTIC_CACHE_THRESHOLD` | `0.88` | Cosine similarity threshold for semantic cache reuse |
+| `CACHE_TTL_SECONDS` | `86400` | Cache time-to-live (24 hours) |
+| `CACHE_MAX_ENTRIES` | `1000` | Maximum cache entries before LRU eviction |
+| `RAG_TOP_K` | `5` | Candidate chunks retrieved during vector search |
+| `RERANKING_ENABLED` | `true` | Whether cross-encoder reranker is active |
+| `RERANK_TOP_K` | `3` | Number of top evidence passages retained after reranking |
+| `MAX_OUTPUT_TOKENS` | `800` | Maximum token ceiling for Gemini LLM generation |
+| `GEMINI_INPUT_PRICE_PER_MILLION` | `0.075` | Configured USD price per 1M input tokens |
+| `GEMINI_OUTPUT_PRICE_PER_MILLION` | `0.30` | Configured USD price per 1M output tokens |
+
+---
+
+## 📊 Accessing the Cost & Performance Dashboard
+
+1. Launch the application: `python -m streamlit run streamlit_app.py`.
+2. In the left sidebar, open the **"💰 Cost Optimization & Performance"** expander.
+3. Explore the 5 interactive tabs:
+   - **📊 Overview:** Live cost per query, cost / 1k queries, token breakdown, cache hit rate, p95 latency.
+   - **🎯 Retrieval:** Configured top_k, candidate counts, retrieval/rerank latency, Recall@K benchmark deltas.
+   - **⚡ Caching:** Exact vs semantic cache hits, misses, bypasses, and calculated dollar savings.
+   - **📦 Indexing:** Total chunks, reused embeddings, manifest location, and change detection status.
+   - **⚙️ Controls:** Sliders to adjust top_k, thresholds, token limits, toggle caching/reranking, and run reindexing.
+
+---
+
 ## 💡 Example Questions to Try
 
 1. **"What is Article 21?"**

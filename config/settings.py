@@ -106,6 +106,65 @@ class Settings:
         default_factory=lambda: os.getenv("AUTH0_AUDIENCE", "")
     )
 
+    # Cost Tracking & Observability Configuration
+    cost_tracking_enabled: bool = field(
+        default_factory=lambda: os.getenv("COST_TRACKING_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    cost_db_path: Path = DATA_DIR / "cost_telemetry.db"
+    gemini_input_price_per_million: float = field(
+        default_factory=lambda: float(os.getenv("GEMINI_INPUT_PRICE_PER_MILLION", "0.075"))
+    )
+    gemini_output_price_per_million: float = field(
+        default_factory=lambda: float(os.getenv("GEMINI_OUTPUT_PRICE_PER_MILLION", "0.30"))
+    )
+
+    # Caching Layer Configuration (Exact & Semantic)
+    exact_cache_enabled: bool = field(
+        default_factory=lambda: os.getenv("EXACT_CACHE_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    semantic_cache_enabled: bool = field(
+        default_factory=lambda: os.getenv("SEMANTIC_CACHE_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    semantic_cache_threshold: float = field(
+        default_factory=lambda: float(os.getenv("SEMANTIC_CACHE_THRESHOLD", "0.88"))
+    )
+    cache_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("CACHE_TTL_SECONDS", "86400"))
+    )
+    cache_max_entries: int = field(
+        default_factory=lambda: int(os.getenv("CACHE_MAX_ENTRIES", "1000"))
+    )
+    semantic_cache_db_path: Path = DATA_DIR / "semantic_cache.db"
+
+    # Incremental Indexing & Embedding Persistence
+    indexing_manifest_path: Path = DATA_DIR / "indexes" / "indexing_manifest.json"
+    persisted_embeddings_path: Path = DATA_DIR / "indexes" / "embeddings.npz"
+
+    # Retrieval & Reranking Tuning
+    rag_top_k: int = field(
+        default_factory=lambda: int(os.getenv("RAG_TOP_K", "5"))
+    )
+    reranking_enabled: bool = field(
+        default_factory=lambda: os.getenv("RERANKING_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    rerank_top_k: int = field(
+        default_factory=lambda: int(os.getenv("RERANK_TOP_K", "3"))
+    )
+
+    # Token & Context Budgets
+    max_context_tokens: int = field(
+        default_factory=lambda: int(os.getenv("MAX_CONTEXT_TOKENS", "2000"))
+    )
+    max_output_tokens: int = field(
+        default_factory=lambda: int(os.getenv("MAX_OUTPUT_TOKENS", "800"))
+    )
+    max_retries: int = field(
+        default_factory=lambda: int(os.getenv("MAX_RETRIES", "3"))
+    )
+    retry_backoff_seconds: float = field(
+        default_factory=lambda: float(os.getenv("RETRY_BACKOFF_SECONDS", "0.5"))
+    )
+
     def ensure_directories(self) -> None:
         """Ensure all required project directories exist."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
