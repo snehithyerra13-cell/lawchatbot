@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-10-29T07:49:32.086904+00:00",
+  "timestamp": "2026-10-29T08:28:33.926354+00:00",
   "baseline": {
     "system_name": "Baseline (Uncached, No Reranking)",
-    "total_execution_time_ms": 866.33,
-    "latency_p50_ms": 1.54,
-    "latency_p95_ms": 1.92,
-    "latency_mean_ms": 1.61,
+    "total_execution_time_ms": 818.55,
+    "latency_p50_ms": 1.23,
+    "latency_p95_ms": 1.84,
+    "latency_mean_ms": 1.33,
     "exact_cache_hit_rate_pct": 0.0,
     "semantic_cache_hit_rate_pct": 0.0,
     "total_cache_hit_rate_pct": 0.0,
@@ -15,23 +15,23 @@
     "reused_chunks_count": 0,
     "reused_chunks_pct": 0.0,
     "reembeddings_avoided": 0,
-    "recall_at_1": 0.56,
-    "recall_at_3": 0.78,
-    "recall_at_10": 0.9,
-    "precision_at_1": 0.68,
-    "mrr": 0.7633,
-    "ndcg_at_10": 0.6982,
-    "citation_validity_rate_pct": 100.0,
+    "recall_at_1": 0.72,
+    "recall_at_3": 0.9,
+    "recall_at_10": 0.94,
+    "precision_at_1": 0.84,
+    "mrr": 0.8833,
+    "ndcg_at_10": 0.8036,
+    "citation_validity_rate_pct": 96.0,
     "abstention_accuracy_pct": 100.0,
     "crosstalk_failures": 0,
     "details": {}
   },
   "optimized": {
     "system_name": "Optimized (Dual Cache + Reranker + Incremental Index)",
-    "total_execution_time_ms": 963.09,
-    "latency_p50_ms": 2.25,
-    "latency_p95_ms": 7.0,
-    "latency_mean_ms": 2.07,
+    "total_execution_time_ms": 897.11,
+    "latency_p50_ms": 2.01,
+    "latency_p95_ms": 7.24,
+    "latency_mean_ms": 1.95,
     "exact_cache_hit_rate_pct": 83.3,
     "semantic_cache_hit_rate_pct": 3.3,
     "total_cache_hit_rate_pct": 86.7,
@@ -53,11 +53,11 @@
     "details": {}
   },
   "improvements": {
-    "p50_latency_reduction_pct": -46.1,
-    "p95_latency_reduction_pct": -264.58,
+    "p50_latency_reduction_pct": -63.41,
+    "p95_latency_reduction_pct": -293.48,
     "cost_savings_pct": 52.83,
-    "recall_at_1_gain_pct": 14.29,
-    "mrr_gain_pct": 8.18,
-    "ndcg_at_10_gain_pct": 9.74
+    "recall_at_1_gain_pct": -11.11,
+    "mrr_gain_pct": -6.52,
+    "ndcg_at_10_gain_pct": -4.65
   }
 }

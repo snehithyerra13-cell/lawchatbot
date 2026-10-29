@@ -22,7 +22,7 @@ def route_classification(
     if intent == "cached_response":
         return "finalize_response"
 
-    if intent in ["out_of_scope", "temporal_inquiry", "insufficient_evidence"]:
+    if intent in ["out_of_scope", "temporal_inquiry", "insufficient_evidence", "clarification_needed"]:
         return "handle_uncertainty"
 
     if intent == "greeting":

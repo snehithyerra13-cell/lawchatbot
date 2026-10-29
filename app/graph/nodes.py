@@ -140,8 +140,14 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
         "raw_question": raw_question,
         "question": rewritten_q,
         "rewritten_question": rewritten_q,
+        "original_query": raw_question,
+        "resolved_query": rewritten_q,
         "query_rewriter_metadata": rewrite_result,
         "prior_user_query": raw_question,
+        "is_follow_up": rewrite_result.get("is_follow_up", False),
+        "follow_up_type": rewrite_result.get("follow_up_type", ""),
+        "active_topic": rewrite_result.get("active_topic") or topic,
+        "domain_classification": "constitutional" if intent != "out_of_scope" else "out_of_domain",
     }
 
     if intent in ["temporal_inquiry", "insufficient_evidence"]:
@@ -159,6 +165,22 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
         updates["abstention_reason"] = ans_msg
         updates["answer"] = ans_msg
         updates["gemini_answer"] = ans_msg
+        updates["sources"] = []
+        updates["retrieved_documents"] = []
+    elif intent == "clarification_needed":
+        clarification_msg = rewrite_result.get("clarification_message") or (
+            "I could not identify which constitutional article or topic was previously discussed in this conversation. "
+            "Please specify an article number (for example: *'What is Article 14?'* or *'Explain Article 21'*)."
+        )
+        updates["intent"] = "clarification_needed"
+        updates["needs_clarification"] = True
+        updates["article_number"] = None
+        updates["topic"] = None
+        updates["response_type"] = "uncertain"
+        updates["answerability_status"] = "INSUFFICIENT_EVIDENCE"
+        updates["abstention_reason"] = clarification_msg
+        updates["answer"] = clarification_msg
+        updates["gemini_answer"] = clarification_msg
         updates["sources"] = []
         updates["retrieved_documents"] = []
     elif intent == "out_of_scope":
@@ -184,7 +206,7 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
             art_str = str(articles[0]).strip().upper()
             updates["article_number"] = art_str
             updates["last_discussed_article"] = art_str
-            if intent in ["follow_up_history", "follow_up_simple", "follow_up_example", "article_lookup"]:
+            if intent:
                 updates["intent"] = intent
     elif intent:
         updates["intent"] = intent
@@ -194,6 +216,21 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
 
     updates["turn_start_time"] = turn_start_t
     updates["turn_timestamp"] = turn_ts_str
+
+    thread_id = state.get("thread_id") or "default"
+    logger.info(
+        "Structured Observability: thread_id=%s, history_len=%d, original_query='%s', resolved_query='%s', "
+        "is_follow_up=%s (type=%s), active_topic=%s, domain=%s, intent=%s",
+        thread_id,
+        len(messages),
+        raw_question,
+        rewritten_q,
+        rewrite_result.get("is_follow_up", False),
+        rewrite_result.get("follow_up_type", ""),
+        updates.get("active_topic"),
+        updates.get("domain_classification"),
+        updates.get("intent"),
+    )
 
     return updates
 
@@ -274,27 +311,47 @@ def classify_question(state: ConstitutionState) -> Dict[str, Any]:
                 "needs_clarification": False,
                 "response_type": "comparison",
             }
+        if existing_intent == "clarification_needed":
+            ans_msg = state.get("answer") or (
+                "I could not identify which constitutional article or topic was previously discussed in this conversation. "
+                "Please specify an article number (for example: *'What is Article 14?'* or *'Explain Article 21'*)."
+            )
+            return {
+                "intent": "clarification_needed",
+                "article_number": None,
+                "comparison_articles": None,
+                "comparison_data": None,
+                "gemini_answer": ans_msg,
+                "answer": ans_msg,
+                "topic": None,
+                "needs_clarification": True,
+                "response_type": "uncertain",
+                "answerability_status": "INSUFFICIENT_EVIDENCE",
+                "abstention_reason": ans_msg,
+                "sources": [],
+                "retrieved_documents": [],
+            }
         if existing_intent in ["follow_up_history", "history_inquiry"]:
             return {
                 "intent": "follow_up_history",
-                "article_number": existing_art,
+                "article_number": existing_art or state.get("last_discussed_article"),
                 "last_discussed_article": existing_art or state.get("last_discussed_article"),
                 "comparison_articles": None,
                 "comparison_data": None,
                 "gemini_answer": None,
-                "topic": state.get("topic"),
+                "topic": state.get("topic") or state.get("active_topic"),
                 "needs_clarification": False,
                 "response_type": "article",
             }
-        if existing_intent in ["follow_up_simple", "follow_up_example"]:
+        if str(existing_intent).startswith("follow_up"):
             return {
                 "intent": existing_intent,
-                "article_number": existing_art,
+                "article_number": existing_art or state.get("last_discussed_article"),
                 "last_discussed_article": existing_art or state.get("last_discussed_article"),
                 "comparison_articles": None,
                 "comparison_data": None,
                 "gemini_answer": None,
-                "topic": state.get("topic"),
+                "topic": state.get("topic") or state.get("active_topic"),
                 "needs_clarification": False,
                 "response_type": "article",
             }
@@ -680,13 +737,20 @@ def resolve_context(state: ConstitutionState) -> Dict[str, Any]:
         last_article = all_discussed_articles[-1]
 
     if not last_article:
+        clarification_msg = (
+            "I could not identify which constitutional article or topic was previously discussed in this conversation. "
+            "Please specify an article number (for example: *'What is Article 14?'* or *'Explain Article 21'*)."
+        )
         return {
             "needs_clarification": True,
-            "answer": (
-                "I could not identify which constitutional article or topic was previously discussed in this conversation. "
-                "Please specify an article number (for example: *'What is Article 21?'* or *'Explain Article 14'*)."
-            ),
+            "intent": "clarification_needed",
+            "answer": clarification_msg,
+            "gemini_answer": clarification_msg,
             "response_type": "uncertain",
+            "answerability_status": "INSUFFICIENT_EVIDENCE",
+            "abstention_reason": clarification_msg,
+            "sources": [],
+            "retrieved_documents": [],
         }
 
     kb = get_knowledge_base()
@@ -982,11 +1046,11 @@ def generate_answer(state: ConstitutionState) -> Dict[str, Any]:
         pdf_name = doc["source_pdf"]
 
         # Format based on sub-intent
-        if intent in ["follow_up_simple", "article_simple"]:
+        if intent in ["follow_up_simple", "article_simple", "follow_up_simplification"]:
             context_prefix = (
                 f"> 🔗 **Context Continuity:** Continuing our follow-up on **Article {art_num}** (*{title}*)"
                 f"{f' following your prior question: *\"{prior_q}\"*' if prior_q else ''}.\n\n"
-                if intent == "follow_up_simple"
+                if str(intent).startswith("follow_up")
                 else ""
             )
             answer = (
@@ -1009,11 +1073,11 @@ def generate_answer(state: ConstitutionState) -> Dict[str, Any]:
                 f"*Source: {pdf_name}, Page {page}. Deterministic legal rule-based interpretation.*"
             )
 
-        elif intent in ["follow_up_example", "article_example"]:
+        elif intent in ["follow_up_example", "article_example", "follow_up_examples"]:
             context_prefix = (
                 f"> 🔗 **Context Continuity:** Practical case scenario for **Article {art_num}** (*{title}*)"
                 f"{f' (answering follow-up on *\"{prior_q}\"*' if prior_q else ''}.\n\n"
-                if intent == "follow_up_example"
+                if str(intent).startswith("follow_up")
                 else ""
             )
             answer = (
@@ -1035,6 +1099,53 @@ def generate_answer(state: ConstitutionState) -> Dict[str, Any]:
                 f"**Summary of Provision:**\n{explanation}\n\n"
                 f"*Source: {pdf_name}, Page {page}.*"
             )
+
+        elif intent in ["follow_up_detail"]:
+            context_prefix = (
+                f"> 🔗 **Context Continuity:** Detailed constitutional analysis of **Article {art_num}** (*{title}*)"
+                f"{f' expanding on: *\"{prior_q}\"*' if prior_q else ''}.\n\n"
+            )
+            answer = (
+                f"{context_prefix}"
+                f"### Article {art_num}: {title} — Verbatim Constitution Text & Detailed Breakdown *(Source: {pdf_name}, Page {page})*\n"
+                f"**Part:** {part} ({part_title}) | **Source:** {pdf_name} (Page {page})\n\n"
+                f"#### Complete Statutory Constitutional Text (Verbatim from Official PDF):\n"
+                f"> {text}\n\n"
+                f"#### Comprehensive Legal Analysis:\n"
+                f"{explanation}\n\n"
+            )
+            if principles:
+                answer += "#### Core Constitutional Principles & Doctrines:\n"
+                for p in principles:
+                    answer += f"- {p}\n"
+                answer += "\n"
+            if examples:
+                answer += "#### Judicial Applications & Scenarios:\n"
+                for idx, ex in enumerate(examples, 1):
+                    answer += f"{idx}. {ex}\n"
+                answer += "\n"
+            answer += (
+                f"---\n"
+                f"*Source: Extracted verbatim from {pdf_name} (Page {page}). Full clause fidelity without truncation or silent paraphrasing.*"
+            )
+
+        elif intent in ["follow_up_crisp", "follow_up_detail_and_crisp"]:
+            context_prefix = (
+                f"> 🔗 **Context Continuity:** Concise statutory breakdown of **Article {art_num}** (*{title}*)"
+                f"{f' addressing: *\"{prior_q}\"*' if prior_q else ''}.\n\n"
+            )
+            answer = (
+                f"{context_prefix}"
+                f"### Article {art_num}: {title} (Crisp Breakdown) *(Source: {pdf_name}, Page {page})*\n"
+                f"**Part:** {part} ({part_title})\n\n"
+                f"**Statutory Provision (Verbatim Excerpt):**\n"
+                f"> {text}\n\n"
+                f"**Core Constitutional Rule:**\n"
+                f"{explanation}\n\n"
+            )
+            if principles:
+                answer += f"**Key Principle:** {principles[0]}\n\n"
+            answer += f"*Source: {pdf_name}, Page {page}. Deterministic statutory summary.*"
 
         else:
             context_prefix = (
@@ -1170,15 +1281,19 @@ def handle_uncertainty(state: ConstitutionState) -> Dict[str, Any]:
             "answerability_status": "RETRIEVAL_FAILURE",
         }
 
-    existing_answer = state.get("answer")
-    if existing_answer and state.get("needs_clarification"):
+    if intent == "clarification_needed" or state.get("needs_clarification"):
+        clarification_msg = state.get("abstention_reason") or state.get("answer") or (
+            "I could not identify which constitutional article or topic you are referring to. "
+            "Please specify an article number (for example: *'What is Article 14?'* or *'Explain Article 21'*)."
+        )
         return {
-            "answer": existing_answer,
-            "gemini_answer": existing_answer,
+            "answer": clarification_msg,
+            "gemini_answer": clarification_msg,
             "sources": [],
             "retrieved_documents": [],
             "response_type": "uncertain",
             "answerability_status": "INSUFFICIENT_EVIDENCE",
+            "abstention_reason": clarification_msg,
         }
 
     answer = (
@@ -1212,7 +1327,13 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
     mem0_memories = state.get("mem0_memories") or []
 
     if not gemini_ans:
-        if (
+        if intent == "clarification_needed" or state.get("needs_clarification"):
+            gemini_ans = state.get("abstention_reason") or state.get("answer") or (
+                "I could not identify which constitutional article or topic was previously discussed in this conversation. "
+                "Please specify an article number (for example: *'What is Article 14?'* or *'Explain Article 21'*)."
+            )
+            gemini_diagnostic = {"success": True, "status_code": 200, "note": "clarification_needed"}
+        elif (
             intent in ["temporal_inquiry", "insufficient_evidence"]
             or resp_type == "insufficient_evidence"
             or state.get("answerability_status") == "INSUFFICIENT_EVIDENCE"
@@ -1389,7 +1510,6 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
             "retrieved_documents": retrieved,
             "rerank_metadata": state.get("rerank_metadata"),
             "execution_time_seconds": exec_time,
-        "turn_timestamp": turn_ts,
             "turn_timestamp": turn_ts,
             "timestamp": turn_ts,
             "timer_display": f"{exec_time:.2f}s",
@@ -1402,6 +1522,11 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
             "citation_is_valid": citation_valid,
             "grounding_badge": grounding_badge,
             "citation_status_label": citation_status_label,
+            "original_query": state.get("original_query") or state.get("raw_question"),
+            "resolved_query": state.get("resolved_query") or state.get("question"),
+            "is_follow_up": state.get("is_follow_up", False),
+            "follow_up_type": state.get("follow_up_type", ""),
+            "active_topic": state.get("active_topic"),
         },
     )
 
@@ -1523,6 +1648,17 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
     threading.Thread(target=_bg_save_mem0, daemon=True).start()
     threading.Thread(target=_bg_record_cost_and_cache, daemon=True).start()
 
+    logger.info(
+        "Structured Response Observability: thread_id=%s, original_query='%s', resolved_query='%s', "
+        "selected_engine=%s, answerability_status=%s, execution_time=%.2fs",
+        state.get("thread_id") or "default",
+        state.get("original_query") or state.get("raw_question"),
+        state.get("resolved_query") or state.get("question"),
+        choice,
+        ans_status,
+        exec_time or 0.0,
+    )
+
     return {
         "messages": [ai_msg],
         "answer": rule_ans,
@@ -1538,4 +1674,9 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
         "citation_is_valid": citation_valid,
         "grounding_badge": grounding_badge,
         "citation_status_label": citation_status_label,
+        "original_query": state.get("original_query") or state.get("raw_question"),
+        "resolved_query": state.get("resolved_query") or state.get("question"),
+        "is_follow_up": state.get("is_follow_up", False),
+        "follow_up_type": state.get("follow_up_type", ""),
+        "active_topic": state.get("active_topic"),
     }

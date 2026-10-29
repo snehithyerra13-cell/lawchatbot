@@ -94,11 +94,33 @@ def is_temporal_or_dynamic_query(query: str) -> Tuple[bool, Optional[str]]:
     return False, None
 
 
-def evaluate_query_domain(query: str) -> Tuple[bool, str]:
+def evaluate_query_domain(
+    query: str,
+    conversation_history: Optional[List[Any]] = None,
+    resolved_query: Optional[str] = None,
+) -> Tuple[bool, str]:
     """Determine whether a query is genuinely within the Constitution of India domain.
     
     Returns (is_in_domain, rejection_reason).
     """
+    # If a pre-resolved query is provided and differs from raw query, evaluate the resolved form
+    if resolved_query and resolved_query.strip() and resolved_query.strip() != query.strip():
+        in_dom, reason = evaluate_query_domain(resolved_query)
+        if in_dom:
+            return True, ""
+
+    # If conversation history is available, check if the raw query resolves into an in-domain follow-up
+    if conversation_history:
+        try:
+            from app.retrieval.context_resolver import resolve_follow_up_query
+            ctx_res = resolve_follow_up_query(query, conversation_history)
+            if ctx_res.is_follow_up and ctx_res.resolved_query:
+                in_dom, reason = evaluate_query_domain(ctx_res.resolved_query)
+                if in_dom:
+                    return True, ""
+        except Exception as ex_ctx:
+            logger.debug("Follow-up domain evaluation fallback: %s", ex_ctx)
+
     q_lower = query.lower().strip()
 
     # 1. Foreign legal systems
@@ -181,13 +203,20 @@ def evaluate_evidence_sufficiency(
     query: str,
     retrieved_docs: List[Dict[str, Any]],
     intent: Optional[str] = None,
+    conversation_history: Optional[List[Any]] = None,
+    resolved_query: Optional[str] = None,
 ) -> EvidenceEvaluationResult:
     """Evaluate whether the retrieved evidence sufficiently and factually supports the query."""
-    q_lower = query.lower().strip()
+    eval_target = (resolved_query or query).strip()
+    q_lower = eval_target.lower()
     audit: List[str] = []
 
     # Step 1: Check Domain Restriction
-    in_domain, domain_reason = evaluate_query_domain(query)
+    in_domain, domain_reason = evaluate_query_domain(
+        query,
+        conversation_history=conversation_history,
+        resolved_query=resolved_query,
+    )
     if not in_domain:
         audit.append(f"Domain rejection: {domain_reason}")
         return EvidenceEvaluationResult(
@@ -343,6 +372,7 @@ def validate_citations_for_answer(
                 "page_start": doc.get("page_start") or doc.get("page_number", ""),
                 "page_end": doc.get("page_end", doc.get("page_start", "")),
                 "article_number": art,
+                "article": art,
                 "article_title": doc.get("article_title") or doc.get("section", ""),
                 "part": doc.get("part", "Part III"),
                 "part_title": doc.get("part_title", ""),
@@ -361,6 +391,7 @@ def validate_citations_for_answer(
                 "page_start": doc.get("page_start") or doc.get("page_number", ""),
                 "page_end": doc.get("page_end", doc.get("page_start", "")),
                 "article_number": art,
+                "article": art,
                 "article_title": doc.get("article_title") or doc.get("section", ""),
                 "part": doc.get("part", "Part III"),
                 "part_title": doc.get("part_title", ""),

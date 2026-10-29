@@ -310,7 +310,20 @@ class NormalRAGPipeline:
         self.top_k = top_k
         self.abstention_threshold = abstention_threshold
 
-    def execute(self, query: str) -> RAGTurnOutput:
+    def execute(
+        self,
+        query: str,
+        conversation_history: Optional[Any] = None,
+    ) -> RAGTurnOutput:
+        if conversation_history:
+            try:
+                from app.retrieval.context_resolver import resolve_follow_up_query
+                ctx_res = resolve_follow_up_query(query, conversation_history)
+                if ctx_res.is_follow_up and ctx_res.resolved_query:
+                    query = ctx_res.resolved_query
+            except Exception as ex_cr:
+                logger.debug("Normal RAG context resolve fallback: %s", ex_cr)
+
         # Check cache for sub-millisecond repeat queries
         cached = _GLOBAL_RAG_CACHE.get(query, pipeline_name="normal_rag")
         if cached:
@@ -384,6 +397,14 @@ class NormalRAGPipeline:
         t1 = time.perf_counter()
         q_vec = self.corpus.vectorizer.transform([clean_q])
         cos_sims = (self.corpus.tfidf_matrix * q_vec.T).toarray().flatten()
+
+        # Prioritize matching article number if explicitly present in query
+        art_matches = re.findall(r"\b(?:article|art\.?)\s*(\d+[a-z]?)\b", clean_q.lower())
+        if art_matches:
+            target_art = art_matches[0].upper()
+            for idx, c in enumerate(self.corpus.chunks):
+                if str(c.get("article_number", "")).strip().upper() == target_art:
+                    cos_sims[idx] += 1.0
 
         if len(cos_sims) > self.top_k:
             part = np.argpartition(cos_sims, -self.top_k)[-self.top_k:]
@@ -548,7 +569,21 @@ class AdvancedRAGPipeline:
         self.rrf_k = rrf_k
         self.abstention_threshold = abstention_threshold
 
-    def execute(self, query: str, api_key: Optional[str] = None) -> RAGTurnOutput:
+    def execute(
+        self,
+        query: str,
+        api_key: Optional[str] = None,
+        conversation_history: Optional[Any] = None,
+    ) -> RAGTurnOutput:
+        if conversation_history:
+            try:
+                from app.retrieval.context_resolver import resolve_follow_up_query
+                ctx_res = resolve_follow_up_query(query, conversation_history)
+                if ctx_res.is_follow_up and ctx_res.resolved_query:
+                    query = ctx_res.resolved_query
+            except Exception as ex_cr:
+                logger.debug("Advanced RAG context resolve fallback: %s", ex_cr)
+
         # Check cache for sub-millisecond repeat queries
         cached = _GLOBAL_RAG_CACHE.get(query, pipeline_name="advanced_rag")
         if cached:

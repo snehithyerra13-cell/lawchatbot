@@ -561,13 +561,16 @@ def generate_gemini_with_diagnostics(
         "You are an expert constitutional legal assistant specializing in the Constitution of India. "
         "Your task is to provide clear, articulate, authoritative, and helpful answers to the user's questions. "
         "Always ground your reasoning directly in the provided verbatim evidence extracted from the official Constitution of India PDF. "
-        "Maintain continuity with prior conversation history without explicitly mentioning previous research, sessions, or past articles unless the user directly asks for a comparison. "
+        "Maintain continuity with prior conversation history. When answering a follow-up inquiry (such as 'in detail', 'make it crisp', "
+        "'give an example', or 'explain about it in detail and crisp'), answer the specific elaboration request while maintaining focus "
+        "on the established constitutional article or topic. Do not repeat your entire previous answer; provide the requested refinement or elaboration. "
+        "Never reject an in-domain follow-up simply because the current prompt is brief. "
         "If Mem0 user context is provided, adapt tone and emphasize relevant constitutional aspects accordingly. "
         "Structure your response with clear headings, bullet points, and plain-English explanations.\n"
         "STRICT STYLE RULE: DO NOT use conversational throat-clearing, meta-announcements, or persona declarations. "
         "NEVER begin your answer with 'As an expert...', 'As a constitutional scholar...', 'Based on the official text...', "
         "'Based on the context of your previous research...', 'Here is a breakdown...', or similar phrases. "
-        "DO NOT reference prior conversation history unless the user explicitly requested a comparison or follow-up. Jump directly into the substantive legal analysis and headings."
+        "Jump directly into the substantive legal analysis and headings."
     )
 
     prompt = (
@@ -721,52 +724,27 @@ def is_constitutional_domain_query(
     if is_person_or_name_query(question):
         return False
 
-    # 2. Greetings
+    # 2. Context-aware follow-up check:
+    # If this query is a follow-up that resolves to a constitutional article or topic from history:
+    from app.retrieval.context_resolver import resolve_follow_up_query
+    ctx_res = resolve_follow_up_query(question, conversation_history)
+    if ctx_res.is_follow_up:
+        return True
+
+    # 3. Greetings
     greetings = {"hi", "hello", "hey", "namaste", "greetings", "good morning", "good evening", "who are you", "what can you do", "help"}
     if q_lower in greetings or any(q_lower.startswith(g + " ") for g in greetings if len(g) > 2):
         return True
 
-    # 3. Direct article mentions
+    # 4. Direct article mentions in current query
     if extract_articles_from_text(q_norm):
         return True
 
-    # 4. Explicit constitutional indicators & legal domains
+    # 5. Explicit constitutional indicators & legal domains
     for kw in CONSTITUTIONAL_INDICATORS:
         if re.search(r"\b" + re.escape(kw) + r"\b", q_lower):
             return True
 
-    # 4. Check if it's an explicit follow-up referencing prior context in conversation history
-    follow_up_phrases = [
-        "what article i had asked",
-        "what article i asked",
-        "what article did i ask",
-        "which article did i ask",
-        "what did i ask",
-        "what article did we discuss",
-        "which article was that",
-        "what article was that",
-        "earlier article",
-        "previous article",
-        "what article had i asked",
-        "explain it simply",
-        "in simpler words",
-        "simple english",
-        "in simple terms",
-        "give an example",
-        "give me an example",
-        "practical example",
-        "case example",
-        "tell me more about it",
-        "explain it more",
-        "simplify it",
-    ]
-    if any(fp in q_lower for fp in follow_up_phrases):
-        prior_art = find_prior_article_in_history(conversation_history)
-        if prior_art:
-            return True
-
-    # 5. Queries about non-constitutional living people, politicians, or arbitrary subjects
-    # e.g. "who is modi", "who is chandra shekar rao", "who is rahul gandhi" have NO constitutional context
     return False
 
 
@@ -774,31 +752,12 @@ def fallback_heuristic_rewrite(
     question: str, conversation_history: Sequence[BaseMessage] = ()
 ) -> Dict[str, Any]:
     """Deterministic offline fallback query rewriter when LLM is unavailable."""
+    from app.retrieval.context_resolver import resolve_follow_up_query
+
     q_norm = " ".join(question.strip().split())
     q_lower = q_norm.lower()
 
-    # Domain context gate: If query has no constitutional context, immediately flag out_of_scope
-    if not is_constitutional_domain_query(question, conversation_history):
-        return {
-            "rewritten_query": None,
-            "articles": [],
-            "intent": "out_of_scope",
-            "topic": None,
-            "confidence": 1.0,
-        }
-
-    # 1. Greetings
-    greetings = {"hi", "hello", "hey", "namaste", "greetings", "good morning", "good evening", "who are you"}
-    if q_lower in greetings or any(q_lower.startswith(g + " ") for g in greetings):
-        return {
-            "rewritten_query": q_norm,
-            "articles": [],
-            "intent": "greeting",
-            "topic": None,
-            "confidence": 1.0,
-        }
-
-    # 2. Temporal inquiries or unrecorded dynamic current events (e.g. amendments passed yesterday)
+    # 1. Temporal inquiries or unrecorded dynamic current events (e.g. amendments passed yesterday)
     from app.retrieval.evidence_guard import is_temporal_or_dynamic_query
     is_temp, temp_msg = is_temporal_or_dynamic_query(question)
     if is_temp:
@@ -811,7 +770,69 @@ def fallback_heuristic_rewrite(
             "is_domain_related": True,
         }
 
-    # 3. History inquiries (e.g. "what article i had asked you")
+    # 2. Context-aware follow-up resolution using conversation history
+    ctx_res = resolve_follow_up_query(question, conversation_history)
+    if ctx_res.needs_clarification:
+        return {
+            "rewritten_query": question,
+            "articles": [],
+            "intent": "clarification_needed",
+            "topic": None,
+            "confidence": 1.0,
+            "clarification_message": ctx_res.clarification_message,
+            "is_domain_related": True,
+            "is_follow_up": True,
+        }
+
+    if ctx_res.is_follow_up:
+        intent_map = {
+            "detail": "follow_up_detail",
+            "crisp": "follow_up_crisp",
+            "detail_and_crisp": "follow_up_detail",
+            "example": "follow_up_example",
+            "simplify": "follow_up_simple",
+            "exceptions": "follow_up_detail",
+            "clauses": "follow_up_detail",
+            "pronoun": "follow_up_detail",
+            "compare": "comparison",
+            "pivot": "article_lookup",
+        }
+        mapped_intent = intent_map.get(ctx_res.follow_up_type, "follow_up_general")
+        return {
+            "rewritten_query": ctx_res.resolved_query,
+            "articles": ctx_res.target_articles,
+            "intent": mapped_intent,
+            "topic": ctx_res.active_topic,
+            "confidence": ctx_res.confidence,
+            "is_domain_related": True,
+            "is_follow_up": True,
+            "follow_up_type": ctx_res.follow_up_type,
+        }
+
+    # 3. Domain context gate: If query has no constitutional context and is not a follow-up, flag out_of_scope
+    if not is_constitutional_domain_query(question, conversation_history):
+        return {
+            "rewritten_query": None,
+            "articles": [],
+            "intent": "out_of_scope",
+            "topic": None,
+            "confidence": 1.0,
+            "is_domain_related": False,
+        }
+
+    # 4. Greetings
+    greetings = {"hi", "hello", "hey", "namaste", "greetings", "good morning", "good evening", "who are you"}
+    if q_lower in greetings or any(q_lower.startswith(g + " ") for g in greetings):
+        return {
+            "rewritten_query": q_norm,
+            "articles": [],
+            "intent": "greeting",
+            "topic": None,
+            "confidence": 1.0,
+            "is_domain_related": True,
+        }
+
+    # 5. History inquiries (e.g. "what article i had asked you")
     history_indicators = [
         "what article i had asked",
         "what article i asked",
@@ -834,6 +855,7 @@ def fallback_heuristic_rewrite(
                 "intent": "follow_up_history",
                 "topic": "Fundamental Rights",
                 "confidence": 0.95,
+                "is_domain_related": True,
             }
 
     # 3. Follow-up simple or example
@@ -976,11 +998,14 @@ def rewrite_constitutional_query(
         "Your PRIMARY task is to decide whether the user's question is RELATED to the domain of the Constitution of India or NOT.\n\n"
         "DOMAIN DEFINITION:\n"
         "- IN DOMAIN: Questions specifically about the Constitution of India (Articles 1-395, Parts I-XXII, Schedules, Amendments, Fundamental Rights, Directive Principles, Constitutional Offices like President, Prime Minister, Governor, Parliament, Supreme Court, constitutional legal doctrines and rights), greetings/help, or valid conversational follow-ups.\n"
+        "- FOLLOW-UP CONTINUITY RULE: If the user question is a short follow-up or refinement (e.g. 'in detail', 'explain about it in detail and crisp', 'give an example', 'make it crisp', 'exceptions', 'what about Article 21', 'compare both') referring to an article or topic discussed in PRIOR CHAT HISTORY, it is IN DOMAIN (is_domain_related: true). Rewrite it to explicitly state the target article and the requested elaboration (e.g., 'Explain Article 14 of the Constitution of India in detail').\n"
+        "  Distinguish between pivots to a new article (e.g., 'what about Article 21') and elaboration on the current article.\n"
+        "  If there is NO prior conversation history and the user provides an isolated fragment like 'in detail', mark intent: \"clarification_needed\".\n"
         "- NOT IN DOMAIN (OUT OF SCOPE):\n"
         "  1. Questions asking for individual people, specific living persons, politicians, or officeholders (e.g., 'who is modi', 'who is chandra shekar rao', 'who is rahul gandhi').\n"
         "  2. Questions asking to NAME an individual person or asking 'who is the [officeholder]' (e.g., 'name the president of india', 'who is the president of india', 'name the prime minister', 'who is the prime minister', 'who is the chief justice', 'what is the name of the president').\n"
         "     NOTE: The Constitution of India establishes constitutional offices (e.g., Article 52 establishes the office of President), but DOES NOT contain the names of individual officeholders or incumbents. Inquiries asking for a person's name or who holds the office are asking about a single person and are NOT in the constitutional domain! Do NOT map 'name the president' or 'who is the president' to Article 52 or the Union Executive!\n"
-        "  3. General politics, weather, sports, entertainment, recipes, coding, general trivia.\n\n"
+        "  3. General politics, weather, sports, entertainment, recipes, coding, foreign law, general trivia (e.g., 'What is the capital of France?', 'Write a Python program').\n\n"
         f"=== PRIOR CHAT HISTORY ===\n{history_str}\n\n"
         f"=== USER QUESTION ===\n\"{question}\"\n\n"
         "Output ONLY a valid JSON object:\n"
@@ -992,10 +1017,18 @@ def rewrite_constitutional_query(
         "  \"articles\": [],\n"
         "  \"topic\": null\n"
         "}\n\n"
+        "If the question is an isolated follow-up without prior history:\n"
+        "{\n"
+        "  \"is_domain_related\": true,\n"
+        "  \"intent\": \"clarification_needed\",\n"
+        "  \"rewritten_query\": null,\n"
+        "  \"articles\": [],\n"
+        "  \"topic\": null\n"
+        "}\n\n"
         "If the question IS domain related:\n"
         "{\n"
         "  \"is_domain_related\": true,\n"
-        "  \"intent\": \"article_lookup\" | \"topic\" | \"comparison\" | \"follow_up_simple\" | \"follow_up_example\" | \"follow_up_history\" | \"greeting\" | \"general\",\n"
+        "  \"intent\": \"article_lookup\" | \"topic\" | \"comparison\" | \"follow_up_detail\" | \"follow_up_crisp\" | \"follow_up_simple\" | \"follow_up_example\" | \"follow_up_history\" | \"greeting\" | \"general\",\n"
         "  \"rewritten_query\": \"Canonical rewritten question referencing specific article numbers and titles\",\n"
         "  \"articles\": [\"specific article numbers if applicable\"],\n"
         "  \"topic\": \"topic name if applicable or null\"\n"
