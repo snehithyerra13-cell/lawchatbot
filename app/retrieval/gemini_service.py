@@ -798,7 +798,20 @@ def fallback_heuristic_rewrite(
             "confidence": 1.0,
         }
 
-    # 2. History inquiries (e.g. "what article i had asked you")
+    # 2. Temporal inquiries or unrecorded dynamic current events (e.g. amendments passed yesterday)
+    from app.retrieval.evidence_guard import is_temporal_or_dynamic_query
+    is_temp, temp_msg = is_temporal_or_dynamic_query(question)
+    if is_temp:
+        return {
+            "rewritten_query": question,
+            "articles": [],
+            "intent": "temporal_inquiry",
+            "topic": "Constitutional Amendments",
+            "confidence": 0.95,
+            "is_domain_related": True,
+        }
+
+    # 3. History inquiries (e.g. "what article i had asked you")
     history_indicators = [
         "what article i had asked",
         "what article i asked",

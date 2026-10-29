@@ -1,8 +1,8 @@
 Metric,Baseline System,Optimized System,Delta / Improvement
-Total Execution Time (ms),802.99,961.09,+158.10 ms
-Latency p50 (Median) (ms),1.28,2.72,-112.5%
-Latency p95 (ms),1.89,8.01,-323.8%
-Mean Latency (ms),1.27,2.42,-90.6%
+Total Execution Time (ms),866.33,963.09,+96.76 ms
+Latency p50 (Median) (ms),1.54,2.25,-46.1%
+Latency p95 (ms),1.92,7.00,-264.6%
+Mean Latency (ms),1.61,2.07,-28.6%
 Exact Cache Hit Rate (%),0.0%,83.3%,+83.3%
 Semantic Cache Hit Rate (%),0.0%,3.3%,+3.3%
 Total Cache Hit Rate (%),0.0%,86.7%,+86.7%

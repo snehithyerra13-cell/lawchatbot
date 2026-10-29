@@ -22,7 +22,7 @@ def route_classification(
     if intent == "cached_response":
         return "finalize_response"
 
-    if intent == "out_of_scope":
+    if intent in ["out_of_scope", "temporal_inquiry", "insufficient_evidence"]:
         return "handle_uncertainty"
 
     if intent == "greeting":
@@ -65,6 +65,14 @@ def route_retrieval(
     state: ConstitutionState,
 ) -> Literal["generate_answer", "handle_uncertainty"]:
     """Route after check_retrieval node."""
+    ans_status = state.get("answerability_status")
+    if ans_status in ["INSUFFICIENT_EVIDENCE", "OUT_OF_DOMAIN", "RETRIEVAL_FAILURE"]:
+        return "handle_uncertainty"
+
+    resp_type = state.get("response_type")
+    if resp_type in ["insufficient_evidence", "out_of_scope", "retrieval_failure"]:
+        return "handle_uncertainty"
+
     has_comp = bool(state.get("comparison_data"))
     has_docs = len(state.get("retrieved_documents", [])) > 0
     has_topic = bool(state.get("topic"))

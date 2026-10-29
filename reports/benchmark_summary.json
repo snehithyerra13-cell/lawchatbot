@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-10-29T07:08:04.681129+00:00",
+  "timestamp": "2026-10-29T07:49:32.086904+00:00",
   "baseline": {
     "system_name": "Baseline (Uncached, No Reranking)",
-    "total_execution_time_ms": 802.99,
-    "latency_p50_ms": 1.28,
-    "latency_p95_ms": 1.89,
-    "latency_mean_ms": 1.27,
+    "total_execution_time_ms": 866.33,
+    "latency_p50_ms": 1.54,
+    "latency_p95_ms": 1.92,
+    "latency_mean_ms": 1.61,
     "exact_cache_hit_rate_pct": 0.0,
     "semantic_cache_hit_rate_pct": 0.0,
     "total_cache_hit_rate_pct": 0.0,
@@ -28,10 +28,10 @@
   },
   "optimized": {
     "system_name": "Optimized (Dual Cache + Reranker + Incremental Index)",
-    "total_execution_time_ms": 961.09,
-    "latency_p50_ms": 2.72,
-    "latency_p95_ms": 8.01,
-    "latency_mean_ms": 2.42,
+    "total_execution_time_ms": 963.09,
+    "latency_p50_ms": 2.25,
+    "latency_p95_ms": 7.0,
+    "latency_mean_ms": 2.07,
     "exact_cache_hit_rate_pct": 83.3,
     "semantic_cache_hit_rate_pct": 3.3,
     "total_cache_hit_rate_pct": 86.7,
@@ -53,8 +53,8 @@
     "details": {}
   },
   "improvements": {
-    "p50_latency_reduction_pct": -112.5,
-    "p95_latency_reduction_pct": -323.81,
+    "p50_latency_reduction_pct": -46.1,
+    "p95_latency_reduction_pct": -264.58,
     "cost_savings_pct": 52.83,
     "recall_at_1_gain_pct": 14.29,
     "mrr_gain_pct": 8.18,

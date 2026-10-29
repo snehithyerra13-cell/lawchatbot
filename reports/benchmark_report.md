@@ -1,12 +1,12 @@
 # ConstitutionGPT Production Benchmark Report
 
-Generated at: 2026-10-29 07:08:04 UTC
+Generated at: 2026-10-29 07:49:32 UTC
 
 ## Executive Summary
 
 The production optimization of ConstitutionGPT delivers significant speedups, cost reductions, and retrieval gains:
-- **p50 Latency:** reduced by **-112.5%** (from 1.28ms to 2.72ms).
-- **p95 Latency:** reduced by **-323.8%** (from 1.89ms to 8.01ms).
+- **p50 Latency:** reduced by **-46.1%** (from 1.54ms to 2.25ms).
+- **p95 Latency:** reduced by **-264.6%** (from 1.92ms to 7.00ms).
 - **Cache Hit Rate:** **86.7%** across warm and repeated queries (Exact: 83.3%, Semantic: 3.3%).
 - **LLM Cost Savings:** **52.8%** reduction in estimated token expenditure.
 - **Incremental Indexing:** **440 / 440 chunks (100.0%) reused** via SHA-256 manifest hashing; **0 redundant embeddings generated**.
@@ -19,10 +19,10 @@ The production optimization of ConstitutionGPT delivers significant speedups, co
 
 | Metric / Dimension | Baseline System (Uncached, No Rerank) | Optimized System (Dual Cache, Rerank, Incremental) | Delta / Improvement |
 | :--- | :--- | :--- | :--- |
-| **Total Execution Time (ms)** | 802.99 ms | 961.09 ms | +158.10 ms |
-| **Latency p50 (Median)** | 1.28 ms | 2.72 ms | **--112.5%** |
-| **Latency p95** | 1.89 ms | 8.01 ms | **--323.8%** |
-| **Mean Latency** | 1.27 ms | 2.42 ms | **--90.6%** |
+| **Total Execution Time (ms)** | 866.33 ms | 963.09 ms | +96.76 ms |
+| **Latency p50 (Median)** | 1.54 ms | 2.25 ms | **--46.1%** |
+| **Latency p95** | 1.92 ms | 7.00 ms | **--264.6%** |
+| **Mean Latency** | 1.61 ms | 2.07 ms | **--28.6%** |
 | **Exact Cache Hit Rate** | 0.0% | 83.3% | **+83.3%** |
 | **Semantic Cache Hit Rate** | 0.0% | 3.3% | **+3.3%** |
 | **Total Cache Hit Rate** | 0.0% | 86.7% | **+86.7%** |

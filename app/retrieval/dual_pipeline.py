@@ -246,18 +246,38 @@ def check_domain_and_abstention(
     dense_threshold: float = 0.04,
 ) -> Tuple[bool, str]:
     """Determine whether a query is unanswerable, out-of-domain, or lacks evidentiary support."""
+    from app.retrieval.evidence_guard import (
+        is_temporal_or_dynamic_query,
+        CANONICAL_MAX_ARTICLE,
+        CANONICAL_MAX_PAGE,
+    )
+
     q_lower = query.lower()
 
     # 1. Non-existent article numbers (> 395)
     art_matches = re.findall(r"\b(?:article|art\.?)\s*(\d+)\b", q_lower)
     for a in art_matches:
-        if int(a) > 395:
+        if int(a) > CANONICAL_MAX_ARTICLE:
             return (
                 True,
-                f"Article {a} does not exist in the Constitution of India (official provisions span Articles 1 to 395).",
+                f"Article {a} does not exist in the Constitution of India (official provisions span Articles 1 to {CANONICAL_MAX_ARTICLE}).",
             )
 
-    # 2. Foreign jurisdictions / out of domain legal systems
+    # 2. Non-existent page numbers (> 404)
+    page_matches = re.findall(r"\bpage\s*(\d+)\b", q_lower)
+    for p in page_matches:
+        if int(p) > CANONICAL_MAX_PAGE:
+            return (
+                True,
+                f"Page {p} does not exist in the uploaded Constitution document (the document contains pages 1 to {CANONICAL_MAX_PAGE}).",
+            )
+
+    # 3. Dynamic current affairs / temporal officeholders / time-sensitive inquiries
+    is_temp, temp_msg = is_temporal_or_dynamic_query(query)
+    if is_temp and temp_msg:
+        return True, temp_msg
+
+    # 4. Foreign jurisdictions / out of domain legal systems
     foreign_terms = [
         "us constitution",
         "united states",
@@ -273,26 +293,7 @@ def check_domain_and_abstention(
                 f"Query references foreign constitutional law ('{term}'), which is outside the domain of the Constitution of India.",
             )
 
-    # 3. Dynamic current affairs / temporal officeholders
-    current_affairs = [
-        "in 2024",
-        "in 2025",
-        "in 2026",
-        "current chief justice",
-        "who is the chief justice of india in",
-        "who is the prime minister",
-        "name the president of india",
-        "who is the president",
-        "who is modi",
-    ]
-    for term in current_affairs:
-        if term in q_lower:
-            return (
-                True,
-                "The text of the Constitution establishes structural offices and powers, but does not record current individual officeholders.",
-            )
-
-    # 4. Low retrieval similarity / unindexed topics
+    # 5. Low retrieval similarity / unindexed topics
     if top_dense_score < dense_threshold and top_bm25_score <= 0.0:
         return (
             True,
@@ -408,12 +409,15 @@ class NormalRAGPipeline:
         t2 = time.perf_counter()
         if is_abstention:
             official_text = ""
-            explanation = (
+            explanation = abstention_reason if abstention_reason else (
                 "The indexed Constitution of India does not contain sufficient verified evidence "
                 f"to answer the question: '{clean_q}'. This query appears to be outside constitutional jurisdiction."
             )
             answer = f"**Insufficient Evidence / Out of Domain:**\n{explanation}"
             citations = []
+            retrieved_chunks = []
+            retrieved_chunk_ids = []
+            initial_scores = {}
         else:
             primary_chunk = retrieved_chunks[0]
             official_text = primary_chunk.get("text", "")
@@ -443,7 +447,18 @@ class NormalRAGPipeline:
         t_gen_ms = round((time.perf_counter() - t2) * 1000.0, 3)
 
         # 5. Citation Validation
-        cite_res = validate_citations_against_evidence(answer, retrieved_chunks)
+        if is_abstention:
+            cite_res = CitationValidationResult(
+                is_valid=True,
+                cited_articles=[],
+                verified_articles=[],
+                missing_articles=[],
+                citations_count=0,
+                unsupported_claims=0,
+                notes="No citations present (abstention response).",
+            )
+        else:
+            cite_res = validate_citations_against_evidence(answer, retrieved_chunks)
 
         t_total_ms = round((time.perf_counter() - t_start) * 1000.0, 3)
 
@@ -451,15 +466,15 @@ class NormalRAGPipeline:
             pipeline_name="normal_rag",
             query=query,
             preprocessed_query=clean_q,
-            retrieved_chunk_ids=retrieved_chunk_ids,
-            initial_scores=initial_scores,
+            retrieved_chunk_ids=[] if is_abstention else retrieved_chunk_ids,
+            initial_scores={} if is_abstention else initial_scores,
             reranker_scores={},
-            selected_chunk_ids=retrieved_chunk_ids[:3],
-            retrieved_chunks=retrieved_chunks,
+            selected_chunk_ids=[] if is_abstention else retrieved_chunk_ids[:3],
+            retrieved_chunks=[] if is_abstention else retrieved_chunks,
             answer=answer,
             plain_english_explanation=explanation,
             official_source_text=official_text,
-            citations=citations,
+            citations=[] if is_abstention else citations,
             citation_validation=asdict(cite_res),
             is_abstention=is_abstention,
             abstention_reason=abstention_reason,
@@ -704,12 +719,15 @@ class AdvancedRAGPipeline:
         t5 = time.perf_counter()
         if is_abstention:
             official_text = ""
-            explanation = (
+            explanation = abstention_reason if abstention_reason else (
                 "The indexed Constitution of India does not establish or support an authoritative answer "
                 f"for the query: '{clean_q}'. This query appears to be out-of-domain or factually unsupported."
             )
             answer = f"**Insufficient Evidence / Out of Domain:**\n{explanation}"
             citations = []
+            final_chunks = []
+            final_chunk_ids = []
+            reranked_scores = {}
         else:
             primary_chunk = final_chunks[0]
             official_text = primary_chunk.get("text", "")
@@ -760,7 +778,18 @@ class AdvancedRAGPipeline:
         t_gen_ms = round((time.perf_counter() - t5) * 1000.0, 3)
 
         # 8. Citation Validation
-        cite_res = validate_citations_against_evidence(answer, final_chunks)
+        if is_abstention:
+            cite_res = CitationValidationResult(
+                is_valid=True,
+                cited_articles=[],
+                verified_articles=[],
+                missing_articles=[],
+                citations_count=0,
+                unsupported_claims=0,
+                notes="No citations present (abstention response).",
+            )
+        else:
+            cite_res = validate_citations_against_evidence(answer, final_chunks)
 
         t_total_ms = round((time.perf_counter() - t_start) * 1000.0, 3)
 
@@ -768,15 +797,15 @@ class AdvancedRAGPipeline:
             pipeline_name="advanced_rag",
             query=query,
             preprocessed_query=clean_q,
-            retrieved_chunk_ids=[self.corpus.chunks[i]["chunk_id"] for i in sorted_rrf_indices[: self.final_top_k]],
-            initial_scores={self.corpus.chunks[i]["chunk_id"]: round(rrf_scores[i], 5) for i in sorted_rrf_indices[: self.final_top_k]},
+            retrieved_chunk_ids=[] if is_abstention else [self.corpus.chunks[i]["chunk_id"] for i in sorted_rrf_indices[: self.final_top_k]],
+            initial_scores={} if is_abstention else {self.corpus.chunks[i]["chunk_id"]: round(rrf_scores[i], 5) for i in sorted_rrf_indices[: self.final_top_k]},
             reranker_scores=reranked_scores,
-            selected_chunk_ids=final_chunk_ids,
-            retrieved_chunks=final_chunks,
+            selected_chunk_ids=[] if is_abstention else final_chunk_ids,
+            retrieved_chunks=[] if is_abstention else final_chunks,
             answer=answer,
             plain_english_explanation=explanation,
             official_source_text=official_text,
-            citations=citations,
+            citations=[] if is_abstention else citations,
             citation_validation=asdict(cite_res),
             is_abstention=is_abstention,
             abstention_reason=abstention_reason,

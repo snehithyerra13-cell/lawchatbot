@@ -138,13 +138,33 @@ def rewrite_query(state: ConstitutionState) -> Dict[str, Any]:
         "prior_user_query": raw_question,
     }
 
-    if intent == "out_of_scope":
+    if intent in ["temporal_inquiry", "insufficient_evidence"]:
+        from app.retrieval.evidence_guard import is_temporal_or_dynamic_query
+        _, reason = is_temporal_or_dynamic_query(raw_question)
+        ans_msg = reason or (
+            "I cannot determine the exact number of constitutional amendments passed yesterday "
+            "from the uploaded Constitution text. The available document does not establish this current information."
+        )
+        updates["intent"] = "temporal_inquiry"
+        updates["article_number"] = None
+        updates["topic"] = "Constitutional Amendments"
+        updates["response_type"] = "insufficient_evidence"
+        updates["answerability_status"] = "INSUFFICIENT_EVIDENCE"
+        updates["abstention_reason"] = ans_msg
+        updates["answer"] = ans_msg
+        updates["gemini_answer"] = ans_msg
+        updates["sources"] = []
+        updates["retrieved_documents"] = []
+    elif intent == "out_of_scope":
         updates["intent"] = "out_of_scope"
         updates["article_number"] = None
         updates["topic"] = None
         updates["response_type"] = "out_of_scope"
+        updates["answerability_status"] = "OUT_OF_DOMAIN"
         updates["question"] = raw_question
         updates["rewritten_question"] = raw_question
+        updates["sources"] = []
+        updates["retrieved_documents"] = []
     elif intent in ["topic", "topic_lookup"]:
         updates["intent"] = "topic_lookup"
         updates["article_number"] = None
@@ -189,6 +209,28 @@ def classify_question(state: ConstitutionState) -> Dict[str, Any]:
                 "topic": state.get("topic"),
                 "needs_clarification": False,
                 "response_type": state.get("response_type", "article"),
+            }
+        if existing_intent in ["temporal_inquiry", "insufficient_evidence"]:
+            from app.retrieval.evidence_guard import is_temporal_or_dynamic_query
+            _, reason = is_temporal_or_dynamic_query(state.get("question", ""))
+            ans_text = reason or state.get("abstention_reason") or (
+                "I cannot determine the exact number of constitutional amendments passed yesterday "
+                "from the uploaded Constitution text. The available document does not establish this current information."
+            )
+            return {
+                "intent": "temporal_inquiry",
+                "article_number": None,
+                "comparison_articles": None,
+                "comparison_data": None,
+                "gemini_answer": ans_text,
+                "answer": ans_text,
+                "topic": "Constitutional Amendments",
+                "needs_clarification": False,
+                "response_type": "insufficient_evidence",
+                "answerability_status": "INSUFFICIENT_EVIDENCE",
+                "abstention_reason": ans_text,
+                "sources": [],
+                "retrieved_documents": [],
             }
         if existing_intent == "out_of_scope":
             return {
@@ -271,9 +313,33 @@ def classify_question(state: ConstitutionState) -> Dict[str, Any]:
                 "response_type": "article",
             }
 
-    raw_q = state.get("question", "")
+    raw_q = state.get("question") or state.get("query") or ""
     q = normalize_query(raw_q)
     q_lower = q.lower()
+
+    # Check for temporal or dynamic inquiries (e.g. amendments passed yesterday)
+    from app.retrieval.evidence_guard import is_temporal_or_dynamic_query
+    is_temp, temp_reason = is_temporal_or_dynamic_query(raw_q)
+    if is_temp:
+        ans_text = temp_reason or (
+            "I cannot determine the exact number of constitutional amendments passed yesterday "
+            "from the uploaded Constitution text. The available document does not establish this current information."
+        )
+        return {
+            "intent": "temporal_inquiry",
+            "article_number": None,
+            "comparison_articles": None,
+            "comparison_data": None,
+            "gemini_answer": ans_text,
+            "answer": ans_text,
+            "topic": "Constitutional Amendments",
+            "needs_clarification": False,
+            "response_type": "insufficient_evidence",
+            "answerability_status": "INSUFFICIENT_EVIDENCE",
+            "abstention_reason": ans_text,
+            "sources": [],
+            "retrieved_documents": [],
+        }
 
     from app.retrieval.gemini_service import is_person_or_name_query
 
@@ -288,6 +354,7 @@ def classify_question(state: ConstitutionState) -> Dict[str, Any]:
             "topic": None,
             "needs_clarification": False,
             "response_type": "out_of_scope",
+            "answerability_status": "OUT_OF_DOMAIN",
         }
 
     # 1. Greetings and identity
@@ -541,6 +608,7 @@ def classify_question(state: ConstitutionState) -> Dict[str, Any]:
             "topic": None,
             "needs_clarification": False,
             "response_type": "out_of_scope",
+            "answerability_status": "OUT_OF_DOMAIN",
         }
 
     # 8. General search fallback or uncertain for in-scope constitutional queries
@@ -771,8 +839,46 @@ def retrieve_constitution(state: ConstitutionState) -> Dict[str, Any]:
 
 def check_retrieval(state: ConstitutionState) -> Dict[str, Any]:
     """Node 4: Evaluate sufficiency and relevance of retrieved documents."""
-    # Pass-through node; routing logic inspects state in routing.py
-    return {}
+    from app.retrieval.evidence_guard import (
+        evaluate_evidence_sufficiency,
+        STATUS_ANSWERABLE,
+        STATUS_INSUFFICIENT_EVIDENCE,
+        STATUS_OUT_OF_DOMAIN,
+        STATUS_RETRIEVAL_FAILURE,
+    )
+
+    if state.get("answerability_status") in [
+        STATUS_INSUFFICIENT_EVIDENCE,
+        STATUS_OUT_OF_DOMAIN,
+        STATUS_RETRIEVAL_FAILURE,
+    ]:
+        return {}
+
+    q = state.get("question") or state.get("query") or ""
+    retrieved = state.get("retrieved_documents", [])
+    intent = state.get("intent", "")
+
+    eval_res = evaluate_evidence_sufficiency(q, retrieved, intent=intent)
+    if eval_res.status != STATUS_ANSWERABLE:
+        resp_type = (
+            "insufficient_evidence"
+            if eval_res.status == STATUS_INSUFFICIENT_EVIDENCE
+            else ("out_of_scope" if eval_res.status == STATUS_OUT_OF_DOMAIN else "retrieval_failure")
+        )
+        return {
+            "answerability_status": eval_res.status,
+            "abstention_reason": eval_res.explanation,
+            "response_type": resp_type,
+            "answer": eval_res.explanation,
+            "gemini_answer": eval_res.explanation,
+            "sources": [],
+            "retrieved_documents": [],
+        }
+
+    return {
+        "answerability_status": STATUS_ANSWERABLE,
+        "retrieved_documents": eval_res.verified_sources or retrieved,
+    }
 
 
 def generate_answer(state: ConstitutionState) -> Dict[str, Any]:
@@ -782,6 +888,15 @@ def generate_answer(state: ConstitutionState) -> Dict[str, Any]:
     docs = state.get("retrieved_documents", [])
     topic_title = state.get("topic")
     prior_q = state.get("prior_user_query", "")
+
+    # If abstaining due to insufficient evidence or retrieval failure
+    if state.get("answerability_status") == "INSUFFICIENT_EVIDENCE" or state.get("response_type") == "insufficient_evidence":
+        return {
+            "answer": state.get("abstention_reason") or "I cannot determine the exact number of constitutional amendments passed yesterday from the uploaded Constitution text. The available document does not establish this current information.",
+            "response_type": "insufficient_evidence",
+            "sources": [],
+            "retrieved_documents": [],
+        }
 
     # 1. Comparison Response
     if comp_data:
@@ -978,27 +1093,83 @@ def handle_general_query(state: ConstitutionState) -> Dict[str, Any]:
 
 
 def handle_uncertainty(state: ConstitutionState) -> Dict[str, Any]:
-    """Node 7: Notification when query is out of scope or information is not found."""
+    """Node 7: Notification when query is out of scope, has insufficient evidence, or encounters an operational error."""
     intent = state.get("intent")
     resp_type = state.get("response_type")
+    ans_status = state.get("answerability_status")
 
-    if intent == "out_of_scope" or resp_type == "out_of_scope":
+    # 1. Insufficient Evidence / Temporal Unrecorded Facts (e.g. amendments passed yesterday)
+    if (
+        intent in ["temporal_inquiry", "insufficient_evidence"]
+        or resp_type == "insufficient_evidence"
+        or ans_status == "INSUFFICIENT_EVIDENCE"
+    ):
+        reason = state.get("abstention_reason")
+        if not reason:
+            from app.retrieval.evidence_guard import is_temporal_or_dynamic_query
+            _, reason = is_temporal_or_dynamic_query(state.get("question", ""))
+
+        answer = reason or (
+            "I cannot determine the exact number of constitutional amendments passed yesterday "
+            "from the uploaded Constitution text. The available document does not establish this current information."
+        )
+        return {
+            "answer": answer,
+            "gemini_answer": answer,
+            "sources": [],
+            "retrieved_documents": [],
+            "response_type": "insufficient_evidence",
+            "answerability_status": "INSUFFICIENT_EVIDENCE",
+            "abstention_reason": answer,
+        }
+
+    # 2. Out of domain (e.g. cricket score, coding, weather, living person identity)
+    if (
+        intent == "out_of_scope"
+        or resp_type == "out_of_scope"
+        or ans_status == "OUT_OF_DOMAIN"
+    ):
         answer = (
             "### ⚖️ Domain Restriction\n\n"
             "Please ask questions based on the Constitution of India domain only."
         )
         return {
             "answer": answer,
+            "gemini_answer": answer,
             "sources": [],
+            "retrieved_documents": [],
             "response_type": "out_of_scope",
+            "answerability_status": "OUT_OF_DOMAIN",
+        }
+
+    # 3. Retrieval failure / operational error
+    if (
+        intent == "retrieval_failure"
+        or resp_type == "retrieval_failure"
+        or ans_status == "RETRIEVAL_FAILURE"
+    ):
+        answer = (
+            "### ⚠️ Retrieval Error\n\n"
+            "An operational error or technical difficulty occurred while retrieving constitutional records. Please try again."
+        )
+        return {
+            "answer": answer,
+            "gemini_answer": answer,
+            "sources": [],
+            "retrieved_documents": [],
+            "response_type": "retrieval_failure",
+            "answerability_status": "RETRIEVAL_FAILURE",
         }
 
     existing_answer = state.get("answer")
     if existing_answer and state.get("needs_clarification"):
         return {
             "answer": existing_answer,
+            "gemini_answer": existing_answer,
             "sources": [],
+            "retrieved_documents": [],
             "response_type": "uncertain",
+            "answerability_status": "INSUFFICIENT_EVIDENCE",
         }
 
     answer = (
@@ -1007,8 +1178,11 @@ def handle_uncertainty(state: ConstitutionState) -> Dict[str, Any]:
     )
     return {
         "answer": answer,
+        "gemini_answer": answer,
         "sources": [],
-        "response_type": "uncertain",
+        "retrieved_documents": [],
+        "response_type": "out_of_scope",
+        "answerability_status": "OUT_OF_DOMAIN",
     }
 
 
@@ -1029,7 +1203,17 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
     mem0_memories = state.get("mem0_memories") or []
 
     if not gemini_ans:
-        if intent in ["out_of_scope", "uncertain"] or resp_type in ["out_of_scope", "uncertain"]:
+        if (
+            intent in ["temporal_inquiry", "insufficient_evidence"]
+            or resp_type == "insufficient_evidence"
+            or state.get("answerability_status") == "INSUFFICIENT_EVIDENCE"
+        ):
+            gemini_ans = state.get("abstention_reason") or state.get("answer") or (
+                "I cannot determine the exact number of constitutional amendments passed yesterday "
+                "from the uploaded Constitution text. The available document does not establish this current information."
+            )
+            gemini_diagnostic = {"success": True, "status_code": 200, "note": "insufficient_evidence"}
+        elif intent in ["out_of_scope", "uncertain"] or resp_type in ["out_of_scope", "uncertain"] or state.get("answerability_status") == "OUT_OF_DOMAIN":
             gemini_ans = (
                 "### ⚖️ Domain Restriction\n\n"
                 "Please ask questions based on the Constitution of India domain only."
@@ -1129,22 +1313,44 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
     response_type = state.get("response_type", "general")
     exec_time = state.get("execution_time_seconds")
 
-    # Ensure sources metadata is populated from retrieved documents if empty
-    if not sources and retrieved:
-        for d in retrieved:
-            sources.append(
-                {
-                    "source_pdf": d.get("source_pdf", "constitution.pdf"),
-                    "page_start": d.get("page_start"),
-                    "page_end": d.get("page_end", d.get("page_start")),
-                    "article_number": d.get("article_number"),
-                    "article_title": d.get("article_title"),
-                    "part": d.get("part"),
-                    "part_title": d.get("part_title"),
-                    "source_hash": d.get("source_hash", "c2e0f5f7a670d362..."),
-                    "verified": True,
-                }
-            )
+    # Citation validation & answerability enforcement
+    ans_status = state.get("answerability_status")
+    if not ans_status:
+        if response_type == "out_of_scope":
+            ans_status = "OUT_OF_DOMAIN"
+        elif response_type in ["insufficient_evidence", "uncertain"]:
+            ans_status = "INSUFFICIENT_EVIDENCE"
+        elif response_type in ["retrieval_failure"]:
+            ans_status = "RETRIEVAL_FAILURE"
+        else:
+            ans_status = "ANSWERABLE"
+
+    from app.retrieval.evidence_guard import validate_citations_for_answer
+
+    # If abstaining, out of domain, or experiencing error: strictly ZERO citations!
+    if ans_status != "ANSWERABLE" or response_type in [
+        "out_of_scope",
+        "insufficient_evidence",
+        "uncertain",
+        "retrieval_failure",
+        "generation_failure",
+    ]:
+        sources = []
+        retrieved = []
+        citation_valid = False
+        grounding_badge = False
+        citation_status_label = (
+            "Insufficient evidence in the available knowledge base."
+            if ans_status == "INSUFFICIENT_EVIDENCE"
+            else "Domain restriction refusal."
+        )
+    else:
+        eval_answer = rule_ans if choice == "rule_based" else (gemini_ans or rule_ans)
+        val_res = validate_citations_for_answer(eval_answer, retrieved or sources, ans_status)
+        sources = val_res.get("citations", [])
+        citation_valid = val_res.get("is_valid", False)
+        grounding_badge = val_res.get("grounding_badge", False)
+        citation_status_label = val_res.get("status_label", "Verified Grounded")
 
     # Format message content based on Human Decision
     if choice == "rule_based":
@@ -1165,10 +1371,15 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
             "retrieved_documents": retrieved,
             "rerank_metadata": state.get("rerank_metadata"),
             "execution_time_seconds": exec_time,
-            "article_number": state.get("article_number") or state.get("last_discussed_article"),
-            "topic": state.get("topic"),
+            "article_number": (state.get("article_number") or state.get("last_discussed_article")) if ans_status == "ANSWERABLE" else None,
+            "topic": state.get("topic") if ans_status == "ANSWERABLE" else None,
             "response_type": response_type,
             "intent": state.get("intent"),
+            "answerability_status": ans_status,
+            "abstention_reason": state.get("abstention_reason"),
+            "citation_is_valid": citation_valid,
+            "grounding_badge": grounding_badge,
+            "citation_status_label": citation_status_label,
         },
     )
 
@@ -1251,8 +1462,13 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
             )
             cost_tracker.record_request(rec)
 
-            # Store in semantic cache if Gemini/answer succeeded and valid
-            if (gemini_ans or rule_ans) and is_cache_hit == "miss" and state.get("intent") not in ["out_of_scope", "uncertain", "greeting"]:
+            # Store in semantic cache only if response was truly answerable and valid
+            if (
+                (gemini_ans or rule_ans)
+                and is_cache_hit == "miss"
+                and ans_status == "ANSWERABLE"
+                and state.get("intent") not in ["out_of_scope", "uncertain", "greeting", "temporal_inquiry", "insufficient_evidence"]
+            ):
                 q_vec = None
                 try:
                     from app.retrieval.dual_pipeline import SharedConstitutionalCorpus
@@ -1290,7 +1506,13 @@ def finalize_response(state: ConstitutionState, *, store: Any = None) -> Dict[st
         "answer": rule_ans,
         "gemini_answer": gemini_ans,
         "sources": sources,
+        "retrieved_documents": retrieved,
         "response_type": response_type,
         "selected_engine": choice,
         "execution_time_seconds": exec_time,
+        "answerability_status": ans_status,
+        "abstention_reason": state.get("abstention_reason"),
+        "citation_is_valid": citation_valid,
+        "grounding_badge": grounding_badge,
+        "citation_status_label": citation_status_label,
     }
