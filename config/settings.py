@@ -78,7 +78,30 @@ class Settings:
     gemini_api_key: str = field(
         default_factory=lambda: os.getenv("GEMINI_API_KEY", "")
     )
-    gemini_model: str = "gemini-flash-latest"
+    gemini_model: str = field(
+        default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+    )
+    gemini_connect_timeout: float = field(
+        default_factory=lambda: float(os.getenv("GEMINI_CONNECT_TIMEOUT", "3.5"))
+    )
+    gemini_read_timeout: float = field(
+        default_factory=lambda: float(os.getenv("GEMINI_READ_TIMEOUT", "10.0"))
+    )
+    gemini_request_timeout: float = field(
+        default_factory=lambda: float(os.getenv("GEMINI_REQUEST_TIMEOUT", "14.0"))
+    )
+    gemini_max_retries: int = field(
+        default_factory=lambda: int(os.getenv("GEMINI_MAX_RETRIES", "1"))
+    )
+    cost_aware_routing_enabled: bool = field(
+        default_factory=lambda: os.getenv("COST_AWARE_ROUTING_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    gemini_max_context_chars: int = field(
+        default_factory=lambda: int(os.getenv("GEMINI_MAX_CONTEXT_CHARS", "2500"))
+    )
+    gemini_max_history_turns: int = field(
+        default_factory=lambda: int(os.getenv("GEMINI_MAX_HISTORY_TURNS", "2"))
+    )
 
     # Mem0 Intelligent Memory Configuration
     mem0_api_key: str = field(

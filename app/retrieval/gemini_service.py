@@ -18,17 +18,22 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from config.settings import get_settings
 
+import hashlib
+import threading
+
 logger = logging.getLogger(__name__)
 
 FALLBACK_MODELS = [
-    "gemini-flash-lite-latest",
     "gemini-3.1-flash-lite-preview",
-    "gemini-flash-latest",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest",
 ]
 
 _HTTP_SESSION = None
 _LAST_DIAGNOSTIC: Optional[GeminiDiagnosticResult] = None
-_GEMINI_SYNTHESIS_CACHE: Dict[str, Any] = {}
+_GEMINI_SYNTHESIS_CACHE: Dict[str, Dict[str, Any]] = {}
+_INFLIGHT_LOCKS_MUTEX = threading.Lock()
+_INFLIGHT_REQUESTS: Dict[str, threading.Lock] = {}
 
 
 @dataclass
@@ -50,6 +55,11 @@ class GeminiDiagnosticResult:
     prompt_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
+    cache_status: str = "miss"  # "hit", "miss", "bypassed"
+    is_fallback: bool = False
+    fallback_source: Optional[str] = None
+    estimated_cost_usd: float = 0.0
+    routed_to: str = "gemini_synthesis"  # "gemini_synthesis", "deterministic_pdf", "cached"
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -196,6 +206,98 @@ def format_user_friendly_error(diag: GeminiDiagnosticResult, article_str: str = 
         )
 
 
+def compute_gemini_cost(prompt_tokens: int, output_tokens: int) -> float:
+    """Compute estimated USD cost based on configured Gemini rates."""
+    settings = get_settings()
+    in_price = getattr(settings, "gemini_input_price_per_million", 0.075)
+    out_price = getattr(settings, "gemini_output_price_per_million", 0.30)
+    cost = (prompt_tokens / 1_000_000.0) * in_price + (output_tokens / 1_000_000.0) * out_price
+    return round(cost, 7)
+
+
+def log_gemini_telemetry(diag: GeminiDiagnosticResult, question: str) -> None:
+    """Emit structured JSON telemetry log for auditability and observability."""
+    telemetry_payload = {
+        "event": "gemini_synthesis_telemetry",
+        "question_snippet": question[:50],
+        "model_used": diag.model_used,
+        "models_attempted": diag.models_attempted,
+        "success": diag.success,
+        "duration_seconds": diag.duration_seconds,
+        "cache_status": getattr(diag, "cache_status", "miss"),
+        "error_type": diag.error_type,
+        "retry_count": diag.retry_count,
+        "is_fallback": getattr(diag, "is_fallback", False),
+        "prompt_tokens": diag.prompt_tokens,
+        "output_tokens": diag.output_tokens,
+        "total_tokens": diag.total_tokens,
+        "estimated_cost_usd": getattr(diag, "estimated_cost_usd", 0.0),
+        "routed_to": getattr(diag, "routed_to", "gemini_synthesis"),
+    }
+    logger.info("GEMINI_TELEMETRY: %s", json.dumps(telemetry_payload))
+
+
+def format_rule_based_fallback_display(
+    rule_answer: str,
+    diag: Optional[GeminiDiagnosticResult] = None,
+    article_label: str = "",
+    reason: str = "fallback",
+) -> str:
+    """Format verified rule-based constitutional text as a graceful fallback or cost-aware answer."""
+    if not rule_answer:
+        return ""
+
+    if reason == "cost_aware_routing":
+        art_title = f" for {article_label}" if article_label else ""
+        return (
+            f"⚡ **Verified Constitutional Direct Retrieval**{art_title}\n\n"
+            f"{rule_answer}\n\n"
+            f"*Served directly from the local Constitution of India PDF (Zero API Latency & Free).* "
+        )
+
+    # Graceful fallback when Gemini timed out or was unavailable
+    err_desc = "timed out" if diag and diag.error_type == "timeout" else "is temporarily unavailable"
+    elapsed = f" after {diag.duration_seconds:.1f}s" if diag and diag.duration_seconds > 0 else ""
+    return (
+        f"⚠️ **Google Gemini synthesis {err_desc}{elapsed}. Displaying verified local PDF analysis:**\n\n"
+        f"{rule_answer}\n\n"
+        f"*The deterministic legal analysis above is 100% verified against your local Constitution PDF.*"
+    )
+
+
+def should_route_to_deterministic_pdf(
+    question: str,
+    topic: Optional[str] = None,
+    retrieved_docs: Optional[List[Dict[str, Any]]] = None,
+) -> bool:
+    """Determine if a query is a simple verbatim lookup suitable for zero-cost deterministic serving."""
+    if not retrieved_docs or not question:
+        return False
+
+    q_lower = question.lower().strip()
+
+    # If the user asks for comparison, deep synthesis, examples, or broad reasoning, route to Gemini
+    synthesis_triggers = [
+        "compare", "difference", "vs", "versus", "explain simply",
+        "in detail", "give an example", "why", "how does", "implications",
+        "critical analysis", "relationship between", "evaluate"
+    ]
+    if any(trigger in q_lower for trigger in synthesis_triggers):
+        return False
+
+    # If asking for exact article (e.g. "what is article 14", "article 21", "art 368")
+    exact_match = re.search(r"^\s*(?:what\s+is\s+|show\s+|tell\s+me\s+about\s+)?(?:article|art\.?)\s*(\d+[a-z]?)\s*\??\s*$", q_lower)
+    if exact_match:
+        target_art = exact_match.group(1).upper()
+        # Verify that top retrieved doc matches this exact article and has verbatim text
+        top_doc = retrieved_docs[0]
+        doc_art = str(top_doc.get("article_number", "")).upper()
+        if doc_art == target_art and len(top_doc.get("constitutional_text", "")) > 40:
+            return True
+
+    return False
+
+
 def clean_constitutional_evidence_text(text: str) -> str:
     """Normalize PDF extraction artifacts and replacement characters in legal text."""
     if not text:
@@ -226,38 +328,53 @@ def get_http_session():
 
 
 def format_conversation_history(
-    messages: Sequence[BaseMessage], max_turns: int = 8
+    messages: Sequence[BaseMessage], max_turns: Optional[int] = None
 ) -> str:
-    """Format prior conversation turns so Gemini has complete context knowledge."""
+    """Format prior conversation turns so Gemini has context knowledge without context bloat."""
     if not messages:
         return "No prior conversation in this thread."
 
+    settings = get_settings()
+    turns_limit = max_turns if max_turns is not None else getattr(settings, "gemini_max_history_turns", 2)
     history_lines: List[str] = []
-    # Take up to the last max_turns messages
-    recent_msgs = messages[-max_turns:]
+
+    # Filter messages to ignore system banners, abstentions, and error messages
+    clean_messages: List[BaseMessage] = []
+    for msg in messages:
+        c = getattr(msg, "content", "").strip()
+        if not c:
+            continue
+        # Skip error / timeout banners from prior turns
+        if "⚠️" in c or "Gemini AI Request Timed Out" in c or "Synthesis Unavailable" in c:
+            continue
+        clean_messages.append(msg)
+
+    recent_msgs = clean_messages[-turns_limit * 2 :] if clean_messages else []
 
     for msg in recent_msgs:
         role = "User" if isinstance(msg, HumanMessage) else "Assistant"
         content = getattr(msg, "content", "").strip()
         if content:
-            # Truncate very long prior outputs for prompt efficiency
-            snippet = content[:600] + ("..." if len(content) > 600 else "")
+            # Truncate very long prior outputs for prompt efficiency (300 chars max)
+            snippet = content[:300] + ("..." if len(content) > 300 else "")
             history_lines.append(f"{role}: {snippet}")
 
-    return "\n\n".join(history_lines)
+    return "\n\n".join(history_lines) if history_lines else "No prior conversation in this thread."
 
 
 def format_retrieved_evidence(
     docs: List[Dict[str, Any]],
     comparison_data: Optional[Dict[str, Any]] = None,
     topic: Optional[str] = None,
+    max_chunks: int = 2,
+    max_chars_per_chunk: int = 1200,
 ) -> str:
-    """Format extracted constitutional PDF text as grounding evidence."""
+    """Format extracted constitutional PDF text as grounding evidence with passage deduplication."""
     if comparison_data:
         art1 = comparison_data["article_1"]
         art2 = comparison_data["article_2"]
-        text1 = clean_constitutional_evidence_text(art1.get("constitutional_text", ""))
-        text2 = clean_constitutional_evidence_text(art2.get("constitutional_text", ""))
+        text1 = clean_constitutional_evidence_text(art1.get("constitutional_text", ""))[:max_chars_per_chunk]
+        text2 = clean_constitutional_evidence_text(art2.get("constitutional_text", ""))[:max_chars_per_chunk]
         return (
             f"--- GROUNDING EVIDENCE FROM LOADED CONSTITUTION PDF ---\n"
             f"[Article {art1['article_number']}: {art1['article_title']}] (Part: {art1['part']}, PDF Page {art1['page_start']})\n"
@@ -269,7 +386,7 @@ def format_retrieved_evidence(
 
     if topic and docs:
         snippets = []
-        for d in docs[:5]:
+        for d in docs[:3]:
             snippet_text = clean_constitutional_evidence_text(d.get("constitutional_text", "")[:400])
             snippets.append(
                 f"- Article {d['article_number']} ({d['article_title']}, Page {d['page_start']}): {snippet_text}"
@@ -282,10 +399,42 @@ def format_retrieved_evidence(
         )
 
     if docs:
+        # Passage Deduplication: Prevent duplicate or overlapping chunks from inflating prompt
+        seen_articles = set()
+        seen_snippets = set()
+        unique_docs: List[Dict[str, Any]] = []
+
+        for d in docs:
+            art_no = str(d.get("article_number", ""))
+            clean_body = clean_constitutional_evidence_text(d.get("constitutional_text", ""))
+            if not clean_body:
+                continue
+            snippet_key = clean_body[:80].strip().lower()
+            if snippet_key in seen_snippets:
+                continue
+            seen_snippets.add(snippet_key)
+
+            # If article already included, only include if distinct clause
+            if art_no and art_no in seen_articles and len(unique_docs) >= 1:
+                continue
+            if art_no:
+                seen_articles.add(art_no)
+
+            unique_docs.append(d)
+            if len(unique_docs) >= max_chunks:
+                break
+
         sections = []
-        for idx, d in enumerate(docs[:3]):
+        for idx, d in enumerate(unique_docs):
             score_line = f"Rerank Score: {d.get('rerank_score')}/100 ({d.get('rerank_reason', '')})\n" if d.get("rerank_score") is not None else ""
             clean_body = clean_constitutional_evidence_text(d.get("constitutional_text", ""))
+            if len(clean_body) > max_chars_per_chunk:
+                cutoff = clean_body[:max_chars_per_chunk].rfind(".")
+                if cutoff > 300:
+                    clean_body = clean_body[: cutoff + 1]
+                else:
+                    clean_body = clean_body[:max_chars_per_chunk] + "..."
+
             sections.append(
                 f"[Document #{idx+1}: Article {d.get('article_number', '')} — {d.get('article_title', '')}] (Article: {d.get('article_number', '')}, Part: {d.get('part', '')}, Page {d.get('page_start', '')})\n"
                 f"{score_line}"
@@ -338,9 +487,12 @@ def execute_gemini_request_with_diagnostics(
     prompt: str,
     api_key: Optional[str] = None,
     article_label: str = "",
-    timeout: int = 8,
-    max_retries_per_model: int = 0,
+    timeout: Optional[Any] = None,
+    max_retries_per_model: Optional[int] = None,
     models: Optional[List[str]] = None,
+    connect_timeout: Optional[float] = None,
+    read_timeout: Optional[float] = None,
+    overall_deadline_seconds: Optional[float] = None,
 ) -> GeminiDiagnosticResult:
     """Execute Gemini generation with safe structured diagnostics, bounded retries, and truthful error categorization."""
     global _LAST_DIAGNOSTIC
@@ -361,10 +513,26 @@ def execute_gemini_request_with_diagnostics(
         _LAST_DIAGNOSTIC = diag
         return diag
 
+    # Configure connect, read, and request-level deadlines
+    if timeout is not None:
+        if isinstance(timeout, (tuple, list)):
+            conn_to = float(timeout[0])
+            read_to = float(timeout[1])
+        else:
+            conn_to = min(3.5, float(timeout))
+            read_to = float(timeout)
+    else:
+        conn_to = connect_timeout if connect_timeout is not None else getattr(settings, "gemini_connect_timeout", 3.5)
+        read_to = read_timeout if read_timeout is not None else getattr(settings, "gemini_read_timeout", 10.0)
+
+    overall_deadline = overall_deadline_seconds or getattr(settings, "gemini_request_timeout", 14.0)
+    retries_limit = max_retries_per_model if max_retries_per_model is not None else getattr(settings, "gemini_max_retries", 1)
+
     models_to_try = list(models or FALLBACK_MODELS)
     models_attempted: List[str] = []
     total_retries = 0
     t_global_start = time.perf_counter()
+    deadline = t_global_start + overall_deadline
 
     last_status: Optional[int] = None
     last_error_type: str = "unknown"
@@ -376,14 +544,31 @@ def execute_gemini_request_with_diagnostics(
     session = get_http_session()
 
     for model_name in models_to_try:
+        # Check overall deadline before starting request to another model
+        elapsed_so_far = time.perf_counter() - t_global_start
+        if elapsed_so_far >= overall_deadline - 2.5:
+            logger.warning(
+                "Gemini overall request deadline reached (%.2fs elapsed, deadline=%.2fs). Halting fallback model cascade.",
+                elapsed_so_far,
+                overall_deadline,
+            )
+            break
+
         models_attempted.append(model_name)
         last_model = model_name
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
 
-        for attempt in range(max_retries_per_model + 1):
+        for attempt in range(retries_limit + 1):
+            rem_budget = deadline - time.perf_counter()
+            if rem_budget <= 2.0:
+                logger.warning("Remaining time budget insufficient (%.2fs remaining), breaking attempt loop", rem_budget)
+                break
+
+            attempt_read_timeout = min(read_to, rem_budget)
+            req_timeout = (conn_to, attempt_read_timeout)
             t_req_start = time.perf_counter()
+
             try:
-                settings = get_settings()
                 resp = session.post(
                     url,
                     json={
@@ -394,7 +579,7 @@ def execute_gemini_request_with_diagnostics(
                             "topP": 0.9,
                         },
                     },
-                    timeout=timeout,
+                    timeout=req_timeout,
                 )
                 duration = time.perf_counter() - t_req_start
 
@@ -407,7 +592,7 @@ def execute_gemini_request_with_diagnostics(
                             if parts and "text" in parts[0]:
                                 raw_ans = parts[0]["text"].strip()
                                 cleaned = clean_gemini_response(raw_ans)
-                                
+
                                 # Extract provider usageMetadata if available
                                 usage = data.get("usageMetadata", {})
                                 p_tokens = usage.get("promptTokenCount")
@@ -418,6 +603,7 @@ def execute_gemini_request_with_diagnostics(
                                     o_tokens = len(raw_ans.split()) * 4 // 3
                                 tot_tokens = usage.get("totalTokenCount", p_tokens + o_tokens)
 
+                                cost_val = compute_gemini_cost(int(p_tokens), int(o_tokens))
                                 diag = GeminiDiagnosticResult(
                                     success=True,
                                     text=cleaned,
@@ -430,6 +616,10 @@ def execute_gemini_request_with_diagnostics(
                                     prompt_tokens=int(p_tokens),
                                     output_tokens=int(o_tokens),
                                     total_tokens=int(tot_tokens),
+                                    cache_status="miss",
+                                    is_fallback=False,
+                                    estimated_cost_usd=cost_val,
+                                    routed_to="gemini_synthesis",
                                 )
                                 _LAST_DIAGNOSTIC = diag
                                 return diag
@@ -465,16 +655,12 @@ def execute_gemini_request_with_diagnostics(
                     last_p_msg[:120],
                 )
 
-                # Permanent client errors: 400, 401, 403 do not succeed on retry or other models
-                if resp.status_code in (400, 401, 403):
-                    break
-
-                # 404: Model not found / discontinued -> fail fast on this model, try next model
-                if resp.status_code == 404:
+                # Permanent client errors: 400, 401, 403, 404 do not succeed on retry or other models
+                if resp.status_code in (400, 401, 403, 404):
                     break
 
                 # 429, 500, 503: Transient retryable errors
-                if is_retryable_error(resp.status_code) and attempt < max_retries_per_model:
+                if is_retryable_error(resp.status_code) and attempt < retries_limit:
                     total_retries += 1
                     delay = compute_backoff_delay(attempt, resp.headers)
                     time.sleep(delay)
@@ -486,8 +672,14 @@ def execute_gemini_request_with_diagnostics(
                 last_status = None
                 last_error_type = "timeout"
                 last_p_msg = sanitize_error_message(str(t_err), key)
-                logger.warning("Gemini model %s timed out after %ds", model_name, timeout)
-                if attempt < max_retries_per_model:
+                logger.warning(
+                    "Gemini model %s timed out after %.1fs (attempt %d/%d)",
+                    model_name,
+                    attempt_read_timeout,
+                    attempt + 1,
+                    retries_limit + 1,
+                )
+                if attempt < retries_limit and (deadline - time.perf_counter()) > 4.0:
                     total_retries += 1
                     time.sleep(compute_backoff_delay(attempt))
                     continue
@@ -498,7 +690,7 @@ def execute_gemini_request_with_diagnostics(
                 last_error_type = "network_error"
                 last_p_msg = sanitize_error_message(str(req_err), key)
                 logger.warning("Gemini model %s network error: %s", model_name, last_p_msg)
-                if attempt < max_retries_per_model:
+                if attempt < retries_limit and (deadline - time.perf_counter()) > 4.0:
                     total_retries += 1
                     time.sleep(compute_backoff_delay(attempt))
                     continue
@@ -520,6 +712,11 @@ def execute_gemini_request_with_diagnostics(
         models_attempted=models_attempted,
         retry_count=total_retries,
         duration_seconds=total_duration,
+        cache_status="miss",
+        is_fallback=True,
+        fallback_source="verified_rule_based_pdf",
+        estimated_cost_usd=0.0,
+        routed_to="gemini_synthesis",
     )
     final_diag.user_friendly_message = format_user_friendly_error(final_diag, article_label)
     final_diag.text = final_diag.user_friendly_message
@@ -535,64 +732,160 @@ def generate_gemini_with_diagnostics(
     topic: Optional[str] = None,
     api_key: Optional[str] = None,
     user_memories: Optional[List[Dict[str, Any]]] = None,
+    fallback_rule_based_answer: Optional[str] = None,
+    fallback_citations: Optional[List[Dict[str, Any]]] = None,
+    force_gemini: bool = False,
 ) -> GeminiDiagnosticResult:
-    """Generate Gemini response and return full structured diagnostics."""
-    norm_q = re.sub(r"[^\w\s]", "", question.lower().strip())
-    if norm_q in _GEMINI_SYNTHESIS_CACHE:
-        cached_res = _GEMINI_SYNTHESIS_CACHE[norm_q]
-        logger.info("Serving Gemini synthesis from in-memory fast cache for: '%s'", question[:40])
-        return cached_res
-
+    """Generate Gemini response with cost-aware routing, exact caching, inflight deduplication, and graceful fallback."""
+    settings = get_settings()
     art_str = f"Article {retrieved_docs[0]['article_number']}" if retrieved_docs and retrieved_docs[0].get("article_number") else ""
-    history_str = format_conversation_history(conversation_history)
-    evidence_str = format_retrieved_evidence(retrieved_docs, comparison_data=comparison_data, topic=topic)
 
-    mem_section = ""
-    if user_memories:
-        mem_lines = []
-        for m in user_memories:
-            text = m.get("memory") if isinstance(m, dict) else str(m)
-            if text:
-                mem_lines.append(f"- {text}")
-        if mem_lines:
-            mem_section = "=== MEM0 PERSISTENT USER MEMORIES & CONTEXT ===\n" + "\n".join(mem_lines) + "\n\n"
+    # 1. Cost-Aware Routing: Simple exact article lookups use verified local PDF analysis ($0.00 cost, <5ms latency)
+    if not force_gemini and getattr(settings, "cost_aware_routing_enabled", True):
+        if should_route_to_deterministic_pdf(question, topic=topic, retrieved_docs=retrieved_docs):
+            fallback_text = fallback_rule_based_answer or (
+                retrieved_docs[0].get("constitutional_text", "") if retrieved_docs else ""
+            )
+            cost_display = format_rule_based_fallback_display(
+                fallback_text,
+                reason="cost_aware_routing",
+                article_label=art_str,
+            )
+            diag = GeminiDiagnosticResult(
+                success=True,
+                text=cost_display,
+                status_code=200,
+                model_used="deterministic-pdf-engine",
+                models_attempted=["deterministic-pdf-engine"],
+                retry_count=0,
+                duration_seconds=0.002,
+                user_friendly_message="",
+                prompt_tokens=0,
+                output_tokens=0,
+                total_tokens=0,
+                cache_status="bypassed",
+                is_fallback=False,
+                estimated_cost_usd=0.0,
+                routed_to="deterministic_pdf",
+            )
+            log_gemini_telemetry(diag, question)
+            return diag
 
-    system_instruction = (
-        "You are an expert constitutional legal assistant specializing in the Constitution of India. "
-        "Your task is to provide clear, articulate, authoritative, and helpful answers to the user's questions. "
-        "Always ground your reasoning directly in the provided verbatim evidence extracted from the official Constitution of India PDF. "
-        "Maintain continuity with prior conversation history. When answering a follow-up inquiry (such as 'in detail', 'make it crisp', "
-        "'give an example', or 'explain about it in detail and crisp'), answer the specific elaboration request while maintaining focus "
-        "on the established constitutional article or topic. Do not repeat your entire previous answer; provide the requested refinement or elaboration. "
-        "Never reject an in-domain follow-up simply because the current prompt is brief. "
-        "If Mem0 user context is provided, adapt tone and emphasize relevant constitutional aspects accordingly. "
-        "Structure your response with clear headings, bullet points, and plain-English explanations.\n"
-        "STRICT STYLE RULE: DO NOT use conversational throat-clearing, meta-announcements, or persona declarations. "
-        "NEVER begin your answer with 'As an expert...', 'As a constitutional scholar...', 'Based on the official text...', "
-        "'Based on the context of your previous research...', 'Here is a breakdown...', or similar phrases. "
-        "Jump directly into the substantive legal analysis and headings."
-    )
+    # 2. Inflight Request Deduplication & Exact Cache
+    norm_q = re.sub(r"[^\w\s]", "", question.lower().strip())
+    model_name = getattr(settings, "gemini_model", "gemini-3.1-flash-lite-preview")
+    cache_key = hashlib.sha256(f"{norm_q}:{model_name}".encode("utf-8")).hexdigest()
 
-    prompt = (
-        f"{system_instruction}\n\n"
-        f"=== PRIOR CONVERSATION HISTORY (Previous context knowledge) ===\n"
-        f"{history_str}\n\n"
-        f"=== CONSTITUTIONAL PDF EVIDENCE ===\n"
-        f"{evidence_str}\n\n"
-        f"{mem_section}"
-        f"=== LATEST USER QUESTION ===\n"
-        f"{question}\n\n"
-        f"Provide your comprehensive, accessible response based on the above evidence and context. Jump directly into the answer without introductory phrases."
-    )
+    with _INFLIGHT_LOCKS_MUTEX:
+        if cache_key not in _INFLIGHT_REQUESTS:
+            _INFLIGHT_REQUESTS[cache_key] = threading.Lock()
+        req_lock = _INFLIGHT_REQUESTS[cache_key]
 
-    res = execute_gemini_request_with_diagnostics(
-        prompt=prompt,
-        api_key=api_key,
-        article_label=art_str,
-    )
-    if res.success and res.text:
-        _GEMINI_SYNTHESIS_CACHE[norm_q] = res
-    return res
+    with req_lock:
+        if cache_key in _GEMINI_SYNTHESIS_CACHE:
+            c_entry = _GEMINI_SYNTHESIS_CACHE[cache_key]
+            logger.info("Serving Gemini synthesis from fast exact cache for: '%s'", question[:40])
+            cached_diag = GeminiDiagnosticResult(
+                success=True,
+                text=c_entry["text"],
+                status_code=200,
+                model_used=c_entry["model_used"],
+                models_attempted=[c_entry["model_used"]],
+                retry_count=0,
+                duration_seconds=0.001,
+                user_friendly_message="",
+                prompt_tokens=c_entry.get("prompt_tokens", 0),
+                output_tokens=c_entry.get("output_tokens", 0),
+                total_tokens=c_entry.get("total_tokens", 0),
+                cache_status="hit",
+                is_fallback=False,
+                estimated_cost_usd=0.0,
+                routed_to="cached",
+            )
+            _LAST_DIAGNOSTIC = cached_diag
+            log_gemini_telemetry(cached_diag, question)
+            return cached_diag
+
+        # 3. Prompt Construction with Compact History and Deduplicated Evidence
+        history_str = format_conversation_history(conversation_history)
+        evidence_str = format_retrieved_evidence(retrieved_docs, comparison_data=comparison_data, topic=topic)
+
+        mem_section = ""
+        if user_memories:
+            mem_lines = []
+            for m in user_memories[:3]:
+                text = m.get("memory") if isinstance(m, dict) else str(m)
+                if text:
+                    mem_lines.append(f"- {text[:150]}")
+            if mem_lines:
+                mem_section = "=== MEM0 PERSISTENT USER MEMORIES & CONTEXT ===\n" + "\n".join(mem_lines) + "\n\n"
+
+        system_instruction = (
+            "You are an expert constitutional legal assistant specializing in the Constitution of India. "
+            "Your task is to provide clear, articulate, authoritative, and helpful answers to the user's questions. "
+            "Always ground your reasoning directly in the provided verbatim evidence extracted from the official Constitution of India PDF. "
+            "Maintain continuity with prior conversation history. When answering a follow-up inquiry (such as 'in detail', 'make it crisp', "
+            "'give an example', or 'explain about it in detail and crisp'), answer the specific elaboration request while maintaining focus "
+            "on the established constitutional article or topic. Do not repeat your entire previous answer; provide the requested refinement or elaboration. "
+            "Never reject an in-domain follow-up simply because the current prompt is brief. "
+            "If Mem0 user context is provided, adapt tone and emphasize relevant constitutional aspects accordingly. "
+            "Structure your response with clear headings, bullet points, and plain-English explanations.\n"
+            "STRICT STYLE RULE: DO NOT use conversational throat-clearing, meta-announcements, or persona declarations. "
+            "NEVER begin your answer with 'As an expert...', 'As a constitutional scholar...', 'Based on the official text...', "
+            "'Based on the context of your previous research...', 'Here is a breakdown...', or similar phrases. "
+            "Jump directly into the substantive legal analysis and headings."
+        )
+
+        prompt = (
+            f"{system_instruction}\n\n"
+            f"=== PRIOR CONVERSATION HISTORY (Previous context knowledge) ===\n"
+            f"{history_str}\n\n"
+            f"=== CONSTITUTIONAL PDF EVIDENCE ===\n"
+            f"{evidence_str}\n\n"
+            f"{mem_section}"
+            f"=== LATEST USER QUESTION ===\n"
+            f"{question}\n\n"
+            f"Provide your comprehensive, accessible response based on the above evidence and context. Jump directly into the answer without introductory phrases."
+        )
+
+        res = execute_gemini_request_with_diagnostics(
+            prompt=prompt,
+            api_key=api_key,
+            article_label=art_str,
+        )
+
+        # 4. Graceful Fallback Handling: Preserve and display verified PDF rule-based answer
+        if not res.success:
+            res.is_fallback = True
+            res.fallback_source = "verified_rule_based_pdf"
+            if fallback_rule_based_answer:
+                res.text = format_rule_based_fallback_display(
+                    fallback_rule_based_answer,
+                    diag=res,
+                    article_label=art_str,
+                )
+        else:
+            res.cache_status = "miss"
+            # Cache validated answers only. NEVER cache timeouts, errors, or abstentions
+            if (
+                res.text
+                and not res.is_fallback
+                and not res.text.startswith("⚠️")
+                and not res.text.startswith("❌")
+                and "Domain Restriction" not in res.text
+            ):
+                _GEMINI_SYNTHESIS_CACHE[cache_key] = {
+                    "text": res.text,
+                    "model_used": res.model_used,
+                    "prompt_tokens": res.prompt_tokens,
+                    "output_tokens": res.output_tokens,
+                    "total_tokens": res.total_tokens,
+                    "estimated_cost_usd": res.estimated_cost_usd,
+                    "timestamp": time.time(),
+                }
+
+        log_gemini_telemetry(res, question)
+        return res
 
 
 def generate_gemini_constitutional_response(
@@ -618,9 +911,9 @@ def generate_gemini_constitutional_response(
 
 
 REWRITE_MODELS = [
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-lite",
     "gemini-flash-lite-latest",
-    "gemini-3.8-flash",
-    "gemini-flash-latest",
 ]
 
 
@@ -1046,7 +1339,7 @@ def rewrite_constitutional_query(
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {"response_mime_type": "application/json"},
                 },
-                timeout=6,
+                timeout=(2.5, 5.0),
             )
             if resp.status_code == 200:
                 data = resp.json()

@@ -1471,6 +1471,9 @@ def synthesize_gemini(state: ConstitutionState) -> Dict[str, Any]:
                         comparison_data=state.get("comparison_data"),
                         topic=state.get("topic"),
                         user_memories=mem0_memories,
+                        fallback_rule_based_answer=state.get("answer", ""),
+                        fallback_citations=state.get("sources", []),
+                        force_gemini=(state.get("selected_engine") == "gemini"),
                     )
                     gemini_ans = diag_res.text
                     gemini_diagnostic = diag_res.to_dict()
