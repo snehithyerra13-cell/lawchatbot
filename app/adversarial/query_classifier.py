@@ -48,7 +48,7 @@ LANDMARK_SUBJECTS: Dict[str, Dict[str, Any]] = {
     "24": {"subject": "Prohibition of child labour in factories", "keywords": ["fourteen years", "factory", "mine", "hazardous"]},
     "25": {"subject": "Freedom of conscience and religion", "keywords": ["profess", "practise", "propagate", "religion", "public order"]},
     "26": {"subject": "Freedom to manage religious affairs", "keywords": ["religious denomination", "charitable", "religious affairs"]},
-    "32": {"subject": "Remedies for enforcement of fundamental rights", "keywords": ["supreme court", "writs", "habeas corpus", "mandamus", "prohibition", "quo warranto", "certiorari"]},
+    "32": {"subject": "Remedies for enforcement of fundamental rights", "keywords": ["remedies", "directly move", "move the supreme court", "writs", "habeas corpus", "mandamus", "prohibition", "quo warranto", "certiorari", "enforcement of fundamental rights"]},
     "40": {"subject": "Organisation of village panchayats", "keywords": ["village panchayats", "local government"]},
     "44": {"subject": "Uniform Civil Code", "keywords": ["uniform civil code", "citizens", "throughout india"]},
     "50": {"subject": "Separation of judiciary from executive", "keywords": ["separation of judiciary", "public services"]},
@@ -59,7 +59,7 @@ LANDMARK_SUBJECTS: Dict[str, Dict[str, Any]] = {
     "74": {"subject": "Council of Ministers to aid and advise President", "keywords": ["council of ministers", "aid and advise", "prime minister"]},
     "76": {"subject": "Attorney-General for India", "keywords": ["attorney-general", "legal advice", "audience in all courts"]},
     "123": {"subject": "Ordinance making power of President", "keywords": ["ordinance", "recess of parliament", "force of act"]},
-    "124": {"subject": "Establishment of Supreme Court", "keywords": ["supreme court", "chief justice", "judges"]},
+    "124": {"subject": "Establishment of Supreme Court", "keywords": ["establishment of supreme court", "constitution of supreme court", "chief justice of india", "appointment of judges"]},
     "141": {"subject": "Law declared by Supreme Court binding", "keywords": ["binding on all courts", "law declared"]},
     "143": {"subject": "Power of President to consult Supreme Court", "keywords": ["consult supreme court", "advisory jurisdiction", "reference"]},
     "214": {"subject": "High Courts for States", "keywords": ["high court for each state"]},
@@ -297,11 +297,26 @@ def analyze_adversarial_query(query: str, history: Sequence[Any] = ()) -> Advers
             audit_notes=audit,
         )
 
-    if distinct_arts:
+    semantic_targets = []
+    if "golden triangle" in q_lower:
+        semantic_targets.extend(["14", "19", "21"])
+    if "discriminate" in q_lower or "discrimination" in q_lower:
+        semantic_targets.extend(["14", "15"])
+    if "education" in q_lower and ("children" in q_lower or "compulsory" in q_lower or "six" in q_lower or "14" in q_lower or "fourteen" in q_lower):
+        semantic_targets.append("21A")
+
+    for art, info in LANDMARK_SUBJECTS.items():
+        if any(kw in q_lower for kw in info.get("keywords", [])):
+            if art not in semantic_targets:
+                semantic_targets.append(art)
+
+    all_targets = list(dict.fromkeys(distinct_arts + semantic_targets))
+
+    if all_targets:
         return AdversarialAnalysisResult(
-            query_type=QUERY_TYPE_EXACT_ARTICLE,
-            target_articles=distinct_arts,
-            confidence=0.90,
+            query_type=QUERY_TYPE_MULTI_HOP if len(all_targets) > 1 else QUERY_TYPE_EXACT_ARTICLE,
+            target_articles=all_targets,
+            confidence=0.88,
             audit_notes=audit,
         )
 

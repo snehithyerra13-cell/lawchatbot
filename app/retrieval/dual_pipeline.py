@@ -398,13 +398,16 @@ class NormalRAGPipeline:
         q_vec = self.corpus.vectorizer.transform([clean_q])
         cos_sims = (self.corpus.tfidf_matrix * q_vec.T).toarray().flatten()
 
-        # Prioritize matching article number if explicitly present in query
-        art_matches = re.findall(r"\b(?:article|art\.?)\s*(\d+[a-z]?)\b", clean_q.lower())
-        if art_matches:
-            target_art = art_matches[0].upper()
-            for idx, c in enumerate(self.corpus.chunks):
-                if str(c.get("article_number", "")).strip().upper() == target_art:
-                    cos_sims[idx] += 1.0
+        # Prioritize matching article number or landmark subject targets
+        from app.adversarial.query_classifier import analyze_adversarial_query
+        norm_adv = analyze_adversarial_query(clean_q)
+        all_norm_targets = list(set([a.upper() for a in re.findall(r"\b(?:article|art\.?)\s*(\d+[a-z]?)\b", clean_q.lower())] + [a.upper() for a in norm_adv.target_articles]))
+        if "preamble" in clean_q.lower():
+            all_norm_targets.append("PREAMBLE")
+        for target_art in all_norm_targets:
+            if target_art in self.corpus.article_index:
+                for idx in self.corpus.article_index[target_art]:
+                    cos_sims[idx] += 2.0
 
         if len(cos_sims) > self.top_k:
             part = np.argpartition(cos_sims, -self.top_k)[-self.top_k:]
@@ -755,10 +758,10 @@ class AdvancedRAGPipeline:
         for k in all_targets:
             if k in self.corpus.article_index:
                 for idx in self.corpus.article_index[k]:
-                    rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.08
+                    rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.25
         if "preamble" in clean_q.lower() and "PREAMBLE" in self.corpus.article_index:
             for idx in self.corpus.article_index["PREAMBLE"]:
-                rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.08
+                rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.25
 
         # Sort combined candidates by RRF score (keeping index with candidate)
         sorted_rrf_indices = sorted(rrf_scores.keys(), key=lambda i: rrf_scores[i], reverse=True)[:15]
