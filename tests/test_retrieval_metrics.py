@@ -15,7 +15,12 @@ import math
 import unittest
 
 from app.retrieval.metrics import (
+    compute_accuracy,
+    compute_binary_precision,
+    compute_binary_recall,
+    compute_confusion_matrix,
     compute_dcg_at_k,
+    compute_f1_score,
     compute_hit_rate_at_k,
     compute_ndcg_at_k,
     compute_precision_at_k,
@@ -149,6 +154,43 @@ class TestRetrievalMetrics(unittest.TestCase):
 
         ndcg_val = compute_ndcg_at_k(retrieved, judgments, 3)
         self.assertAlmostEqual(ndcg_val, expected_ndcg, places=4)
+
+    def test_confusion_matrix_and_f1_accuracy(self):
+        """Case 7: Hand-calculated verification of binary classification metrics."""
+        # 10 examples: 6 positives, 4 negatives
+        ground_truth = [True,  True,  True,  True,  True,  True,  False, False, False, False]
+        predictions  = [True,  True,  True,  True,  False, False, False, False, False, True]
+
+        cm = compute_confusion_matrix(predictions, ground_truth)
+        # TP = 4 (first 4 true positives)
+        # FN = 2 (indices 4, 5 were true but predicted false)
+        # TN = 3 (indices 6, 7, 8 were false and predicted false)
+        # FP = 1 (index 9 was false but predicted true)
+        self.assertEqual(cm["tp"], 4)
+        self.assertEqual(cm["tn"], 3)
+        self.assertEqual(cm["fp"], 1)
+        self.assertEqual(cm["fn"], 2)
+        self.assertEqual(cm["total"], 10)
+
+        # Precision = 4 / (4 + 1) = 0.8
+        self.assertAlmostEqual(compute_binary_precision(4, 1), 0.8)
+
+        # Recall = 4 / (4 + 2) = 4/6 = 0.66667
+        self.assertAlmostEqual(compute_binary_recall(4, 2), 4.0 / 6.0)
+
+        # F1 = 2 * (0.8 * 0.66667) / (0.8 + 0.66667) = 2*4 / (2*4 + 1 + 2) = 8 / 11 = 0.72727
+        expected_f1 = 8.0 / 11.0
+        self.assertAlmostEqual(compute_f1_score(4, 1, 2), expected_f1, places=5)
+
+        # Accuracy = (4 + 3) / 10 = 0.7 (70.0%)
+        self.assertAlmostEqual(compute_accuracy(4, 3, 1, 2), 0.7)
+
+    def test_zero_denominator_edge_cases(self):
+        """Case 8: Zero denominator safety in F1 and Accuracy."""
+        self.assertEqual(compute_f1_score(0, 0, 0), 0.0)
+        self.assertEqual(compute_accuracy(0, 0, 0, 0), 0.0)
+        self.assertEqual(compute_binary_precision(0, 0), 0.0)
+        self.assertEqual(compute_binary_recall(0, 0), 0.0)
 
 
 if __name__ == "__main__":

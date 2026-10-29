@@ -213,11 +213,11 @@ def resolve_follow_up_query(
     has_detail = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["in detail", "detailed", "elaborate", "tell me more", "expand", "deep dive", "in depth", "more details"])
     has_crisp = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["crisp", "make it crisp", "summarize", "in short", "briefly", "concise", "tldr", "short summary", "bullet points"])
     has_example = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["give an example", "give me an example", "an example", "examples", "practical example", "case example", "scenario", "illustration"])
-    has_simplify = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["simplify", "simple english", "in simple words", "in simpler words", "simple terms", "for a beginner", "layman"])
+    has_simplify = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["simplify", "simply", "simple", "simple english", "in simple words", "in simpler words", "simple terms", "for a beginner", "layman"])
     has_exceptions = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["exceptions", "what are its exceptions", "limitations", "reasonable classification", "restrictions", "provisos", "proviso"])
     has_clauses = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["second point", "first point", "first clause", "second clause", "sub clause", "exact wording", "verbatim text"])
     has_compare = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["compare both", "difference between both", "compare them", "difference between them"])
-    has_pronoun = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["explain about it", "tell me about it", "what does it mean", "why is it important", "explain this", "what about that", "the same", "explain the same", "about it"])
+    has_pronoun = any(re.search(r"\b" + re.escape(w) + r"\b", q_lower) for w in ["explain it", "explain about it", "tell me about it", "tell me it", "what does it mean", "why is it important", "explain this", "what about that", "the same", "explain the same", "about it"])
 
     # If the query is an isolated follow-up fragment
     is_contextual_follow_up = (

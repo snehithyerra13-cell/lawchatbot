@@ -178,6 +178,17 @@ def get_adversarial_query_classifier() -> AdversarialQueryClassifier:
 def analyze_adversarial_query(query: str, history: Sequence[Any] = ()) -> AdversarialAnalysisResult:
     """Analyze query for false premises, multi-hop dependencies, ambiguities, and out-of-domain signals."""
     q_clean = " ".join(query.strip().split())
+    
+    # If conversation history exists, resolve follow-up context before domain filtering
+    if history:
+        try:
+            from app.retrieval.context_resolver import resolve_follow_up_query
+            ctx_res = resolve_follow_up_query(query, history)
+            if ctx_res.is_follow_up and ctx_res.resolved_query:
+                q_clean = " ".join(ctx_res.resolved_query.strip().split())
+        except Exception as e_cr:
+            logger.debug("Context resolution fallback in adversarial classifier: %s", e_cr)
+
     q_lower = q_clean.lower()
     audit: List[str] = []
 

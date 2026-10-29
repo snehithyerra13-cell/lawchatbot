@@ -15,9 +15,9 @@
     "ndcg_at_10": 0.6982,
     "source_hit_at_5_pct": 92.0,
     "source_hit_at_10_pct": 92.0,
-    "mean_latency_ms": 0.658,
-    "median_latency_ms": 0.603,
-    "p95_latency_ms": 1.037
+    "mean_latency_ms": 0.648,
+    "median_latency_ms": 0.566,
+    "p95_latency_ms": 0.982
   },
   "bm25_only": {
     "recall_at_1": 0.66,
@@ -35,9 +35,9 @@
     "ndcg_at_10": 0.7568,
     "source_hit_at_5_pct": 92.0,
     "source_hit_at_10_pct": 96.0,
-    "mean_latency_ms": 0.609,
-    "median_latency_ms": 0.554,
-    "p95_latency_ms": 0.895
+    "mean_latency_ms": 0.763,
+    "median_latency_ms": 0.729,
+    "p95_latency_ms": 1.417
   },
   "hybrid_rrf": {
     "recall_at_1": 0.68,
@@ -55,9 +55,9 @@
     "ndcg_at_10": 0.7453,
     "source_hit_at_5_pct": 92.0,
     "source_hit_at_10_pct": 92.0,
-    "mean_latency_ms": 1.962,
-    "median_latency_ms": 1.809,
-    "p95_latency_ms": 2.919
+    "mean_latency_ms": 1.498,
+    "median_latency_ms": 1.334,
+    "p95_latency_ms": 2.11
   },
   "reranked": {
     "recall_at_1": 0.5,
@@ -75,8 +75,8 @@
     "ndcg_at_10": 0.6474,
     "source_hit_at_5_pct": 76.0,
     "source_hit_at_10_pct": 84.0,
-    "mean_latency_ms": 6.625,
-    "median_latency_ms": 6.201,
-    "p95_latency_ms": 11.221
+    "mean_latency_ms": 4.296,
+    "median_latency_ms": 3.962,
+    "p95_latency_ms": 6.361
   }
 }

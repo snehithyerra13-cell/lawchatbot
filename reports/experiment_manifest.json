@@ -1,277 +1,575 @@
 {
-  "timestamp": "2026-10-29T09:55:44.300380+00:00",
+  "timestamp": "2026-10-29T10:33:43.582194+00:00",
   "corpus": {
     "source": "constitution.pdf",
     "sha256": "c2e0f5f7a670d362038190d6792a688a37c25b3918b62f924cb7fe7444ae2608",
     "chunks_count": 440
   },
   "evaluation_configuration": {
-    "dataset": "retrieval_gold.jsonl (25 golden legal queries)",
+    "dataset": "retrieval_gold.jsonl (25 queries) & answer_gold.jsonl (28 queries)",
     "cache_bypassed": true,
-    "metrics_standard": "TREC IR Standard (app/retrieval/metrics.py)"
+    "metrics_standard": "TREC IR & Binary Classification Standard"
   },
-  "retrieval_methods_comparison": {
-    "dense_only": {
-      "recall_at_1": 0.56,
-      "recall_at_3": 0.78,
-      "recall_at_5": 0.9,
-      "recall_at_10": 0.9,
-      "precision_at_1": 0.68,
-      "precision_at_3": 0.3333,
-      "precision_at_5": 0.224,
-      "r_precision": 0.62,
-      "mrr": 0.7633,
-      "hit_rate_at_5": 0.92,
-      "hit_rate_at_10": 0.92,
-      "ndcg_at_5": 0.6967,
-      "ndcg_at_10": 0.6982,
-      "source_hit_at_5_pct": 92.0,
-      "source_hit_at_10_pct": 92.0,
-      "mean_latency_ms": 0.658,
-      "median_latency_ms": 0.603,
-      "p95_latency_ms": 1.037
+  "evaluation_summary": {
+    "retrieval_and_answer_quality": {
+      "normal_rag_f1_score_pct": 98.0,
+      "advanced_rag_f1_score_pct": 88.9,
+      "normal_rag_accuracy_pct": 96.4,
+      "advanced_rag_accuracy_pct": 82.1
     },
-    "bm25_only": {
-      "recall_at_1": 0.66,
-      "recall_at_3": 0.82,
-      "recall_at_5": 0.9,
-      "recall_at_10": 0.94,
-      "precision_at_1": 0.76,
-      "precision_at_3": 0.3467,
-      "precision_at_5": 0.224,
-      "r_precision": 0.76,
-      "mrr": 0.817,
-      "hit_rate_at_5": 0.92,
-      "hit_rate_at_10": 0.96,
-      "ndcg_at_5": 0.7375,
-      "ndcg_at_10": 0.7568,
-      "source_hit_at_5_pct": 92.0,
-      "source_hit_at_10_pct": 96.0,
-      "mean_latency_ms": 0.609,
-      "median_latency_ms": 0.554,
-      "p95_latency_ms": 0.895
+    "latency_profile_p95": {
+      "normal_rag_p95_ms": 1.502,
+      "advanced_rag_p95_ms": 4.64
+    }
+  },
+  "answer_quality": {
+    "total_queries_tested": 28,
+    "normal_rag": {
+      "pipeline_name": "Normal RAG",
+      "counts": {
+        "tp": 24,
+        "tn": 3,
+        "fp": 0,
+        "fn": 1,
+        "total": 28
+      },
+      "precision": 1.0,
+      "recall": 0.96,
+      "f1_score": 0.9796,
+      "accuracy": 0.9643,
+      "f1_score_pct": 98.0,
+      "accuracy_pct": 96.4,
+      "queries": [
+        {
+          "query_id": "gold_001",
+          "query": "What is Article 14 of the Constitution of India?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_002",
+          "query": "Explain Article 21 protection of life and personal liberty",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_003",
+          "query": "What does Article 32 say about constitutional remedies and writ jurisdiction?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_004",
+          "query": "What are the Fundamental Duties under Article 51A?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_005",
+          "query": "What does the Preamble to the Constitution of India declare?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_006",
+          "query": "Can the government arbitrarily discriminate against any citizen without reasonable basis?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_007",
+          "query": "Can a person be deprived of their liberty without following fair procedure established by law?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_008",
+          "query": "How can citizens directly move the Supreme Court when fundamental rights are violated?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_009",
+          "query": "Is the practice of untouchability strictly forbidden and punishable by law in India?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_010",
+          "query": "Can children below the age of fourteen years be employed in hazardous factories or mines?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_011",
+          "query": "Protection against double jeopardy and compelled self-incrimination in criminal trials",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_012",
+          "query": "Right of children to free and compulsory primary education between ages 6 and 14",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_013",
+          "query": "Freedom of conscience and the right freely to profess, practise and propagate religion",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_014",
+          "query": "Separation of judiciary from the executive branch in public administration",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_015",
+          "query": "Power of the President of India to grant pardons, reprieves, respites or remissions of punishment",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_016",
+          "query": "What constitutes the Golden Triangle doctrine of Fundamental Rights in the Indian Constitution?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "FN"
+        },
+        {
+          "query_id": "gold_017",
+          "query": "Compare general equality before law under Article 14 with prohibition of discrimination under Article 15",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_018",
+          "query": "Compare National Emergency under Article 352 with failure of constitutional machinery in States under Article 356",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_019",
+          "query": "Provisions protecting citizens against human trafficking, begar, and hazardous child employment",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_020",
+          "query": "What is the procedure and power of Parliament to amend the Constitution of India under Article 368?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_021",
+          "query": "Can the Supreme Court issue writs against High Courts under Article 32 as opposed to Article 226 powers?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_022",
+          "query": "Does freedom of speech under Article 19 include absolute right to provoke violence without reasonable restrictions?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_023",
+          "query": "Does imposing President's Rule under Article 356 automatically extinguish personal liberty under Article 21?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_024",
+          "query": "Directive principle regarding Uniform Civil Code for all citizens across India",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_025",
+          "query": "Does Article 1 allow individual Indian States to secede or declare sovereignty away from Bharat?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_unans_001",
+          "query": "What is the procedure for amending the United States Constitution under Article 5?",
+          "expected_abstention": true,
+          "is_abstention": true,
+          "classification": "TN"
+        },
+        {
+          "query_id": "gold_unans_002",
+          "query": "Who is the Chief Justice of India in 2026?",
+          "expected_abstention": true,
+          "is_abstention": true,
+          "classification": "TN"
+        },
+        {
+          "query_id": "gold_unans_003",
+          "query": "What does Article 500 of the Constitution of India state regarding taxation?",
+          "expected_abstention": true,
+          "is_abstention": true,
+          "classification": "TN"
+        }
+      ]
     },
-    "hybrid_rrf": {
-      "recall_at_1": 0.68,
-      "recall_at_3": 0.82,
-      "recall_at_5": 0.9,
-      "recall_at_10": 0.9,
-      "precision_at_1": 0.8,
-      "precision_at_3": 0.3467,
-      "precision_at_5": 0.224,
-      "r_precision": 0.76,
-      "mrr": 0.8333,
-      "hit_rate_at_5": 0.92,
-      "hit_rate_at_10": 0.92,
-      "ndcg_at_5": 0.7438,
-      "ndcg_at_10": 0.7453,
-      "source_hit_at_5_pct": 92.0,
-      "source_hit_at_10_pct": 92.0,
-      "mean_latency_ms": 1.962,
-      "median_latency_ms": 1.809,
-      "p95_latency_ms": 2.919
+    "advanced_rag": {
+      "pipeline_name": "Advanced RAG",
+      "counts": {
+        "tp": 20,
+        "tn": 3,
+        "fp": 0,
+        "fn": 5,
+        "total": 28
+      },
+      "precision": 1.0,
+      "recall": 0.8,
+      "f1_score": 0.8889,
+      "accuracy": 0.8214,
+      "f1_score_pct": 88.9,
+      "accuracy_pct": 82.1,
+      "queries": [
+        {
+          "query_id": "gold_001",
+          "query": "What is Article 14 of the Constitution of India?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_002",
+          "query": "Explain Article 21 protection of life and personal liberty",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_003",
+          "query": "What does Article 32 say about constitutional remedies and writ jurisdiction?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_004",
+          "query": "What are the Fundamental Duties under Article 51A?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_005",
+          "query": "What does the Preamble to the Constitution of India declare?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_006",
+          "query": "Can the government arbitrarily discriminate against any citizen without reasonable basis?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_007",
+          "query": "Can a person be deprived of their liberty without following fair procedure established by law?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_008",
+          "query": "How can citizens directly move the Supreme Court when fundamental rights are violated?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "FN"
+        },
+        {
+          "query_id": "gold_009",
+          "query": "Is the practice of untouchability strictly forbidden and punishable by law in India?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_010",
+          "query": "Can children below the age of fourteen years be employed in hazardous factories or mines?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_011",
+          "query": "Protection against double jeopardy and compelled self-incrimination in criminal trials",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_012",
+          "query": "Right of children to free and compulsory primary education between ages 6 and 14",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_013",
+          "query": "Freedom of conscience and the right freely to profess, practise and propagate religion",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_014",
+          "query": "Separation of judiciary from the executive branch in public administration",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_015",
+          "query": "Power of the President of India to grant pardons, reprieves, respites or remissions of punishment",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_016",
+          "query": "What constitutes the Golden Triangle doctrine of Fundamental Rights in the Indian Constitution?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "FN"
+        },
+        {
+          "query_id": "gold_017",
+          "query": "Compare general equality before law under Article 14 with prohibition of discrimination under Article 15",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_018",
+          "query": "Compare National Emergency under Article 352 with failure of constitutional machinery in States under Article 356",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_019",
+          "query": "Provisions protecting citizens against human trafficking, begar, and hazardous child employment",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_020",
+          "query": "What is the procedure and power of Parliament to amend the Constitution of India under Article 368?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_021",
+          "query": "Can the Supreme Court issue writs against High Courts under Article 32 as opposed to Article 226 powers?",
+          "expected_abstention": false,
+          "is_abstention": true,
+          "classification": "FN"
+        },
+        {
+          "query_id": "gold_022",
+          "query": "Does freedom of speech under Article 19 include absolute right to provoke violence without reasonable restrictions?",
+          "expected_abstention": false,
+          "is_abstention": true,
+          "classification": "FN"
+        },
+        {
+          "query_id": "gold_023",
+          "query": "Does imposing President's Rule under Article 356 automatically extinguish personal liberty under Article 21?",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_024",
+          "query": "Directive principle regarding Uniform Civil Code for all citizens across India",
+          "expected_abstention": false,
+          "is_abstention": false,
+          "classification": "TP"
+        },
+        {
+          "query_id": "gold_025",
+          "query": "Does Article 1 allow individual Indian States to secede or declare sovereignty away from Bharat?",
+          "expected_abstention": false,
+          "is_abstention": true,
+          "classification": "FN"
+        },
+        {
+          "query_id": "gold_unans_001",
+          "query": "What is the procedure for amending the United States Constitution under Article 5?",
+          "expected_abstention": true,
+          "is_abstention": true,
+          "classification": "TN"
+        },
+        {
+          "query_id": "gold_unans_002",
+          "query": "Who is the Chief Justice of India in 2026?",
+          "expected_abstention": true,
+          "is_abstention": true,
+          "classification": "TN"
+        },
+        {
+          "query_id": "gold_unans_003",
+          "query": "What does Article 500 of the Constitution of India state regarding taxation?",
+          "expected_abstention": true,
+          "is_abstention": true,
+          "classification": "TN"
+        }
+      ]
+    }
+  },
+  "latency_summary": {
+    "normal_rag": {
+      "p95_ms": 1.502,
+      "sample_count": 25,
+      "percentile_method": "numpy.percentile(latencies, 95)"
     },
-    "reranked": {
-      "recall_at_1": 0.5,
-      "recall_at_3": 0.76,
-      "recall_at_5": 0.76,
-      "recall_at_10": 0.82,
-      "precision_at_1": 0.6,
-      "precision_at_3": 0.32,
-      "precision_at_5": 0.192,
-      "r_precision": 0.6,
-      "mrr": 0.6756,
-      "hit_rate_at_5": 0.76,
-      "hit_rate_at_10": 0.84,
-      "ndcg_at_5": 0.6212,
-      "ndcg_at_10": 0.6474,
-      "source_hit_at_5_pct": 76.0,
-      "source_hit_at_10_pct": 84.0,
-      "mean_latency_ms": 6.625,
-      "median_latency_ms": 6.201,
-      "p95_latency_ms": 11.221
+    "advanced_rag": {
+      "p95_ms": 4.64,
+      "sample_count": 25,
+      "percentile_method": "numpy.percentile(latencies, 95)"
     }
   },
   "pipeline_comparison": {
     "recall_at_1": {
-      "normal": 0.56,
+      "normal": 0.68,
       "advanced": 0.66,
-      "delta": 0.1,
-      "pct_change": 17.86
+      "delta": -0.02,
+      "pct_change": -2.94
     },
     "recall_at_3": {
-      "normal": 0.78,
-      "advanced": 0.86,
-      "delta": 0.08,
-      "pct_change": 10.26
-    },
-    "recall_at_5": {
       "normal": 0.9,
       "advanced": 0.86,
       "delta": -0.04,
       "pct_change": -4.44
     },
+    "recall_at_5": {
+      "normal": 0.94,
+      "advanced": 0.86,
+      "delta": -0.08,
+      "pct_change": -8.51
+    },
     "recall_at_10": {
-      "normal": 0.9,
+      "normal": 0.94,
       "advanced": 0.94,
-      "delta": 0.04,
-      "pct_change": 4.44
+      "delta": 0.0,
+      "pct_change": 0.0
     },
     "precision_at_1": {
-      "normal": 0.68,
+      "normal": 0.8,
       "advanced": 0.76,
-      "delta": 0.08,
-      "pct_change": 11.76
+      "delta": -0.04,
+      "pct_change": -5.0
     },
     "precision_at_3": {
-      "normal": 0.3333,
+      "normal": 0.3733,
       "advanced": 0.36,
-      "delta": 0.0267,
-      "pct_change": 8.01
+      "delta": -0.0133,
+      "pct_change": -3.56
     },
     "precision_at_5": {
-      "normal": 0.224,
+      "normal": 0.232,
       "advanced": 0.216,
-      "delta": -0.008,
-      "pct_change": -3.57
+      "delta": -0.016,
+      "pct_change": -6.9
     },
     "r_precision": {
-      "normal": 0.62,
+      "normal": 0.76,
       "advanced": 0.76,
-      "delta": 0.14,
-      "pct_change": 22.58
+      "delta": 0.0,
+      "pct_change": 0.0
     },
     "mrr": {
-      "normal": 0.7633,
+      "normal": 0.8567,
       "advanced": 0.8161,
-      "delta": 0.0528,
-      "pct_change": 6.92
+      "delta": -0.0406,
+      "pct_change": -4.74
     },
     "hit_rate_at_5": {
-      "normal": 0.92,
+      "normal": 0.96,
       "advanced": 0.88,
-      "delta": -0.04,
-      "pct_change": -4.35
+      "delta": -0.08,
+      "pct_change": -8.33
     },
     "hit_rate_at_10": {
-      "normal": 0.92,
+      "normal": 0.96,
       "advanced": 0.96,
-      "delta": 0.04,
-      "pct_change": 4.35
+      "delta": 0.0,
+      "pct_change": 0.0
     },
     "ndcg_at_5": {
-      "normal": 0.6967,
-      "advanced": 0.7334,
-      "delta": 0.0367,
-      "pct_change": 5.27
+      "normal": 0.7815,
+      "advanced": 0.7381,
+      "delta": -0.0434,
+      "pct_change": -5.55
     },
     "ndcg_at_10": {
-      "normal": 0.6982,
-      "advanced": 0.7587,
-      "delta": 0.0605,
-      "pct_change": 8.67
+      "normal": 0.783,
+      "advanced": 0.7634,
+      "delta": -0.0196,
+      "pct_change": -2.5
     },
     "source_hit_at_5_pct": {
-      "normal": 92.0,
+      "normal": 96.0,
       "advanced": 88.0,
-      "delta": -4.0,
-      "pct_change": -4.35
+      "delta": -8.0,
+      "pct_change": -8.33
     },
     "source_hit_at_10_pct": {
-      "normal": 92.0,
+      "normal": 96.0,
       "advanced": 96.0,
-      "delta": 4.0,
-      "pct_change": 4.35
-    }
-  },
-  "answer_and_abstention": {
-    "total_queries_tested": 28,
-    "answerable_queries": 25,
-    "unanswerable_queries": 3,
-    "normal_rag": {
-      "citation_validity_rate_pct": 100.0,
-      "correct_abstention_rate_pct": 100.0
+      "delta": 0.0,
+      "pct_change": 0.0
     },
-    "advanced_rag": {
-      "citation_validity_rate_pct": 96.0,
-      "correct_abstention_rate_pct": 100.0
-    }
-  },
-  "latency_summary": {
-    "total_benchmark_samples": 25,
-    "normal_rag_latency": {
-      "mean_ms": 1.67,
-      "median_ms": 1.526,
-      "p90_ms": 2.258,
-      "p95_ms": 2.539,
-      "p99_ms": 3.321,
-      "min_ms": 0.841,
-      "max_ms": 3.548
+    "f1_score_pct": {
+      "normal": 98.0,
+      "advanced": 88.9,
+      "delta": -9.1
     },
-    "advanced_rag_latency": {
-      "mean_ms": 5.424,
-      "median_ms": 5.408,
-      "p90_ms": 8.382,
-      "p95_ms": 9.081,
-      "p99_ms": 9.41,
-      "min_ms": 0.044,
-      "max_ms": 9.459
+    "accuracy_pct": {
+      "normal": 96.4,
+      "advanced": 82.1,
+      "delta": -14.3
     },
-    "advanced_rag_stage_breakdown": {
-      "preprocessing_ms": {
-        "mean_ms": 0.203,
-        "median_ms": 0.193,
-        "p90_ms": 0.262,
-        "p95_ms": 0.356,
-        "p99_ms": 0.531,
-        "min_ms": 0.044,
-        "max_ms": 0.58
-      },
-      "dense_retrieval_ms": {
-        "mean_ms": 1.071,
-        "median_ms": 1.081,
-        "p90_ms": 1.58,
-        "p95_ms": 1.856,
-        "p99_ms": 2.158,
-        "min_ms": 0.0,
-        "max_ms": 2.235
-      },
-      "bm25_retrieval_ms": {
-        "mean_ms": 1.115,
-        "median_ms": 1.125,
-        "p90_ms": 1.751,
-        "p95_ms": 2.026,
-        "p99_ms": 2.845,
-        "min_ms": 0.0,
-        "max_ms": 3.091
-      },
-      "fusion_ms": {
-        "mean_ms": 0.039,
-        "median_ms": 0.037,
-        "p90_ms": 0.058,
-        "p95_ms": 0.08,
-        "p99_ms": 0.095,
-        "min_ms": 0.0,
-        "max_ms": 0.098
-      },
-      "reranking_ms": {
-        "mean_ms": 2.883,
-        "median_ms": 2.699,
-        "p90_ms": 5.134,
-        "p95_ms": 5.229,
-        "p99_ms": 5.589,
-        "min_ms": 0.0,
-        "max_ms": 5.702
-      },
-      "generation_ms": {
-        "mean_ms": 0.013,
-        "median_ms": 0.014,
-        "p90_ms": 0.021,
-        "p95_ms": 0.023,
-        "p99_ms": 0.043,
-        "min_ms": 0.0,
-        "max_ms": 0.049
-      }
+    "latency_p95_ms": {
+      "normal": 1.502,
+      "advanced": 4.64,
+      "delta": 3.138
     }
   },
   "weaknesses_and_failures_count": 11

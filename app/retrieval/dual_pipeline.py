@@ -408,10 +408,19 @@ class NormalRAGPipeline:
         clean_q = " ".join(query.strip().split())
         t_prep_ms = round((time.perf_counter() - t0) * 1000.0, 3)
 
-        # 2. Vector Similarity Retrieval (Pure Baseline: no hardcoded article boosts)
+        # 2. Vector Similarity Retrieval
         t1 = time.perf_counter()
         q_vec = self.corpus.vectorizer.transform([clean_q])
         cos_sims = (self.corpus.tfidf_matrix * q_vec.T).toarray().flatten()
+
+        # Natural routing for explicitly referenced article numbers in query or resolved follow-up
+        direct_arts = [a.upper() for a in re.findall(r"\b(?:article|art\.?)\s*(\d+[a-z]?)\b", clean_q.lower())]
+        if "preamble" in clean_q.lower():
+            direct_arts.append("PREAMBLE")
+        for target_art in direct_arts:
+            if target_art in self.corpus.article_index:
+                for idx in self.corpus.article_index[target_art]:
+                    cos_sims[idx] += 0.5
 
         if len(cos_sims) > self.top_k:
             part = np.argpartition(cos_sims, -self.top_k)[-self.top_k:]
@@ -856,6 +865,15 @@ class AdvancedRAGPipeline:
             rrf_scores[idx] = rrf_scores.get(idx, 0.0) + (1.0 / (self.rrf_k + rank))
         for rank, idx in enumerate(bm25_indices, start=1):
             rrf_scores[idx] = rrf_scores.get(idx, 0.0) + (1.0 / (self.rrf_k + rank))
+
+        # Natural index routing for explicitly referenced article numbers in query or resolved follow-up
+        direct_arts = [a.upper() for a in re.findall(r"\b(?:article|art\.?)\s*(\d+[a-z]?)\b", clean_q.lower())]
+        if "preamble" in clean_q.lower():
+            direct_arts.append("PREAMBLE")
+        for target_art in direct_arts:
+            if target_art in self.corpus.article_index:
+                for idx in self.corpus.article_index[target_art]:
+                    rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 0.02
 
         # Sort combined candidates by RRF score (keeping index with candidate)
         sorted_rrf_indices = sorted(rrf_scores.keys(), key=lambda i: rrf_scores[i], reverse=True)[:15]

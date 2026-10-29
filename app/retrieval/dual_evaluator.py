@@ -43,6 +43,11 @@ from app.retrieval.dual_pipeline import (
 )
 from app.retrieval.evaluate_rag import compute_source_hit
 from app.retrieval.metrics import (
+    compute_accuracy,
+    compute_binary_precision,
+    compute_binary_recall,
+    compute_confusion_matrix,
+    compute_f1_score,
     compute_hit_rate_at_k,
     compute_ndcg_at_k,
     compute_precision_at_k,
@@ -314,56 +319,107 @@ class DualRAGEvaluator:
 
         return normal_payload, advanced_payload, comparison
 
+    def evaluate_answer_classification_suite(
+        self,
+        answer_gold_path: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Classify each generated answer as correct or incorrect against trusted reference evidence.
+
+        Binary Classification Task Protocol:
+        - Positive Example: An answerable query (is_answerable=True / expected_abstention=False).
+          - TP: System produces an evidence-grounded answer citing the expected constitutional article(s)
+                with verified citation validity.
+          - FN: System fails to cite the expected article, cites incorrect provisions, or incorrectly abstains.
+        - Negative Example: An unanswerable query (out-of-domain, temporal, or non-existent article).
+          - TN: System correctly recognizes unanswerability and abstains without hallucinating an answer.
+          - FP: System fails to abstain and generates an ungrounded or hallucinated answer.
+
+        Metrics Calculated:
+        - F1 Score = 2TP / (2TP + FP + FN)
+        - Accuracy = (TP + TN) / (TP + TN + FP + FN)
+        """
+        path = answer_gold_path or (self.settings.golden_eval_dir / "answer_gold.jsonl")
+        records = load_jsonl(path)
+
+        def _evaluate_pipe(pipe: Any, name: str) -> Dict[str, Any]:
+            tp = tn = fp = fn = 0
+            query_evals = []
+
+            for r in records:
+                qid = r["query_id"]
+                q = r["query"]
+                exp_abstain = r.get("expected_abstention", False)
+                exp_arts = [str(a).strip().upper() for a in r.get("expected_articles", []) if str(a).strip()]
+
+                out = pipe.execute(q, bypass_cache=True)
+
+                if exp_abstain:
+                    if out.is_abstention:
+                        classification = "TN"
+                        tn += 1
+                    else:
+                        classification = "FP"
+                        fp += 1
+                else:
+                    if out.is_abstention:
+                        classification = "FN"
+                        fn += 1
+                    else:
+                        cited_arts = [str(c.get("article", "")).strip().upper() for c in out.citations]
+                        ret_arts = [str(c.get("article_number", "")).strip().upper() for c in out.retrieved_chunks]
+                        hit = any(a in cited_arts or a in ret_arts for a in exp_arts)
+                        valid = out.citation_validation.get("is_valid", False)
+                        if hit and valid:
+                            classification = "TP"
+                            tp += 1
+                        else:
+                            classification = "FN"
+                            fn += 1
+
+                query_evals.append({
+                    "query_id": qid,
+                    "query": q,
+                    "expected_abstention": exp_abstain,
+                    "is_abstention": out.is_abstention,
+                    "classification": classification,
+                })
+
+            prec = compute_binary_precision(tp, fp)
+            rec = compute_binary_recall(tp, fn)
+            f1 = compute_f1_score(tp, fp, fn)
+            acc = compute_accuracy(tp, tn, fp, fn)
+
+            return {
+                "pipeline_name": name,
+                "counts": {"tp": tp, "tn": tn, "fp": fp, "fn": fn, "total": len(records)},
+                "precision": round(prec, 4),
+                "recall": round(rec, 4),
+                "f1_score": round(f1, 4),
+                "accuracy": round(acc, 4),
+                "f1_score_pct": round(f1 * 100.0, 1),
+                "accuracy_pct": round(acc * 100.0, 1),
+                "queries": query_evals,
+            }
+
+        norm_res = _evaluate_pipe(self.normal_pipeline, "Normal RAG")
+        adv_res = _evaluate_pipe(self.advanced_pipeline, "Advanced RAG")
+
+        return {
+            "total_queries_tested": len(records),
+            "normal_rag": norm_res,
+            "advanced_rag": adv_res,
+        }
+
+    # Backward compatibility alias
     def evaluate_answer_and_abstention_suite(
         self,
         answer_gold_path: Optional[Path] = None,
     ) -> Dict[str, Any]:
-        """Evaluate citation accuracy, supported claims, and correct abstention with cache bypassed."""
-        path = answer_gold_path or (self.settings.golden_eval_dir / "answer_gold.jsonl")
-        records = load_jsonl(path)
-
-        norm_correct_abstentions = 0
-        adv_correct_abstentions = 0
-        total_abstention_expected = sum(1 for r in records if r.get("expected_abstention", False))
-
-        norm_valid_citations = 0
-        adv_valid_citations = 0
-        total_answerable = sum(1 for r in records if not r.get("expected_abstention", False))
-
-        for rec in records:
-            q = rec["query"]
-            exp_abstain = rec.get("expected_abstention", False)
-
-            out_n = self.normal_pipeline.execute(q, bypass_cache=True)
-            out_a = self.advanced_pipeline.execute(q, bypass_cache=True)
-
-            if exp_abstain:
-                if out_n.is_abstention:
-                    norm_correct_abstentions += 1
-                if out_a.is_abstention:
-                    adv_correct_abstentions += 1
-            else:
-                if out_n.citation_validation.get("is_valid", False):
-                    norm_valid_citations += 1
-                if out_a.citation_validation.get("is_valid", False):
-                    adv_valid_citations += 1
-
-        return {
-            "total_queries_tested": len(records),
-            "answerable_queries": total_answerable,
-            "unanswerable_queries": total_abstention_expected,
-            "normal_rag": {
-                "citation_validity_rate_pct": round(norm_valid_citations / max(total_answerable, 1) * 100.0, 1),
-                "correct_abstention_rate_pct": round(norm_correct_abstentions / max(total_abstention_expected, 1) * 100.0, 1),
-            },
-            "advanced_rag": {
-                "citation_validity_rate_pct": round(adv_valid_citations / max(total_answerable, 1) * 100.0, 1),
-                "correct_abstention_rate_pct": round(adv_correct_abstentions / max(total_abstention_expected, 1) * 100.0, 1),
-            },
-        }
+        """Internal helper for backwards-compatibility."""
+        return self.evaluate_answer_classification_suite(answer_gold_path)
 
     def evaluate_latency_profile(self, iterations_per_query: int = 1) -> Dict[str, Any]:
-        """Measure latency distributions with cache bypassed."""
+        """Measure full request latencies and report P95 strictly with cache bypassed."""
         path = self.settings.golden_eval_dir / "retrieval_gold.jsonl"
         if not path.exists():
             path = self.settings.golden_evaluation_dataset_path
@@ -371,14 +427,6 @@ class DualRAGEvaluator:
 
         norm_times = []
         adv_times = []
-        adv_stage_breakdown = {
-            "preprocessing_ms": [],
-            "dense_retrieval_ms": [],
-            "bm25_retrieval_ms": [],
-            "fusion_ms": [],
-            "reranking_ms": [],
-            "generation_ms": [],
-        }
 
         for _ in range(iterations_per_query):
             for q in queries:
@@ -387,26 +435,23 @@ class DualRAGEvaluator:
 
                 out_a = self.advanced_pipeline.execute(q, bypass_cache=True)
                 adv_times.append(out_a.timings_ms["total_ms"])
-                for k in adv_stage_breakdown:
-                    adv_stage_breakdown[k].append(out_a.timings_ms.get(k, 0.0))
 
-        def _stats(arr: List[float]) -> Dict[str, float]:
-            return {
-                "mean_ms": round(float(np.mean(arr)), 3),
-                "median_ms": round(float(np.median(arr)), 3),
-                "p90_ms": round(float(np.percentile(arr, 90)), 3),
-                "p95_ms": round(float(np.percentile(arr, 95)), 3),
-                "p99_ms": round(float(np.percentile(arr, 99)), 3),
-                "min_ms": round(float(np.min(arr)), 3),
-                "max_ms": round(float(np.max(arr)), 3),
-            }
+        if not norm_times or not adv_times:
+            raise RuntimeError("Insufficient samples measured during latency evaluation.")
+
+        p95_normal = round(float(np.percentile(norm_times, 95)), 3)
+        p95_advanced = round(float(np.percentile(adv_times, 95)), 3)
 
         return {
-            "total_benchmark_samples": len(norm_times),
-            "normal_rag_latency": _stats(norm_times),
-            "advanced_rag_latency": _stats(adv_times),
-            "advanced_rag_stage_breakdown": {
-                stage: _stats(vals) for stage, vals in adv_stage_breakdown.items()
+            "normal_rag": {
+                "p95_ms": p95_normal,
+                "sample_count": len(norm_times),
+                "percentile_method": "numpy.percentile(latencies, 95)",
+            },
+            "advanced_rag": {
+                "p95_ms": p95_advanced,
+                "sample_count": len(adv_times),
+                "percentile_method": "numpy.percentile(latencies, 95)",
             },
         }
 
@@ -520,20 +565,57 @@ class DualRAGEvaluator:
         with open(reports_dir / "comparison.json", "w", encoding="utf-8") as f:
             json.dump(comp_rep, f, indent=2)
 
-        # 3. Answer & Abstention Benchmarks
-        ans_rep = self.evaluate_answer_and_abstention_suite()
+        # 3. Answer-Level Correctness & Classification Benchmarks (F1 & Accuracy)
+        ans_quality = self.evaluate_answer_classification_suite()
 
-        # 4. Latency Profile
+        # 4. Latency Profile (P95 Only)
         lat_rep = self.evaluate_latency_profile()
         with open(reports_dir / "latency.json", "w", encoding="utf-8") as f:
             json.dump(lat_rep, f, indent=2)
 
-        # 5. Failure Breakdown & Diagnosis
+        # 5. Clean Evaluation Summary (F1, Accuracy, and P95 Latency)
+        norm_q = ans_quality["normal_rag"]
+        adv_q = ans_quality["advanced_rag"]
+        eval_summary = {
+            "retrieval_and_answer_quality": {
+                "normal_rag_f1_score_pct": norm_q["f1_score_pct"],
+                "advanced_rag_f1_score_pct": adv_q["f1_score_pct"],
+                "normal_rag_accuracy_pct": norm_q["accuracy_pct"],
+                "advanced_rag_accuracy_pct": adv_q["accuracy_pct"],
+            },
+            "latency_profile_p95": {
+                "normal_rag_p95_ms": lat_rep["normal_rag"]["p95_ms"],
+                "advanced_rag_p95_ms": lat_rep["advanced_rag"]["p95_ms"],
+            },
+        }
+        with open(reports_dir / "evaluation_summary.json", "w", encoding="utf-8") as f:
+            json.dump(eval_summary, f, indent=2)
+
+        # Update comparison.json to include F1, Accuracy, and P95
+        comp_rep["f1_score_pct"] = {
+            "normal": norm_q["f1_score_pct"],
+            "advanced": adv_q["f1_score_pct"],
+            "delta": round(adv_q["f1_score_pct"] - norm_q["f1_score_pct"], 2),
+        }
+        comp_rep["accuracy_pct"] = {
+            "normal": norm_q["accuracy_pct"],
+            "advanced": adv_q["accuracy_pct"],
+            "delta": round(adv_q["accuracy_pct"] - norm_q["accuracy_pct"], 2),
+        }
+        comp_rep["latency_p95_ms"] = {
+            "normal": lat_rep["normal_rag"]["p95_ms"],
+            "advanced": lat_rep["advanced_rag"]["p95_ms"],
+            "delta": round(lat_rep["advanced_rag"]["p95_ms"] - lat_rep["normal_rag"]["p95_ms"], 3),
+        }
+        with open(reports_dir / "comparison.json", "w", encoding="utf-8") as f:
+            json.dump(comp_rep, f, indent=2)
+
+        # 6. Failure Breakdown & Diagnosis
         failure_analysis = self.generate_failure_breakdown(independent_methods)
         with open(reports_dir / "failure_analysis.json", "w", encoding="utf-8") as f:
             json.dump(failure_analysis, f, indent=2)
 
-        # 6. Comprehensive Experiment Manifest
+        # 7. Comprehensive Experiment Manifest
         manifest = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "corpus": {
@@ -542,14 +624,14 @@ class DualRAGEvaluator:
                 "chunks_count": len(self.normal_pipeline.corpus.chunks),
             },
             "evaluation_configuration": {
-                "dataset": "retrieval_gold.jsonl (25 golden legal queries)",
+                "dataset": "retrieval_gold.jsonl (25 queries) & answer_gold.jsonl (28 queries)",
                 "cache_bypassed": True,
-                "metrics_standard": "TREC IR Standard (app/retrieval/metrics.py)",
+                "metrics_standard": "TREC IR & Binary Classification Standard",
             },
-            "retrieval_methods_comparison": methods_summary,
-            "pipeline_comparison": comp_rep,
-            "answer_and_abstention": ans_rep,
+            "evaluation_summary": eval_summary,
+            "answer_quality": ans_quality,
             "latency_summary": lat_rep,
+            "pipeline_comparison": comp_rep,
             "weaknesses_and_failures_count": len(failure_analysis),
         }
         with open(reports_dir / "experiment_manifest.json", "w", encoding="utf-8") as f:
@@ -561,42 +643,33 @@ class DualRAGEvaluator:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
-    print("=" * 80)
-    print("RUNNING CONSTITUTIONGPT AUDITED RETRIEVAL BENCHMARK & EVALUATION HARNESS")
-    print("=" * 80)
     evaluator = DualRAGEvaluator()
     manifest = evaluator.run_full_benchmark_and_save()
 
-    print("\n1. INDEPENDENT RETRIEVAL METHODS BENCHMARK:")
-    print(f"{'Method':<32} | {'R@1':<7} | {'R@3':<7} | {'R@5':<7} | {'R@10':<7} | {'P@1':<7} | {'P@5':<7} | {'MRR':<7} | {'NDCG@10':<7}")
-    print("-" * 95)
-    for m_key, metrics in manifest["retrieval_methods_comparison"].items():
-        print(
-            f"{m_key:<32} | "
-            f"{metrics['recall_at_1']:<7.4f} | "
-            f"{metrics['recall_at_3']:<7.4f} | "
-            f"{metrics['recall_at_5']:<7.4f} | "
-            f"{metrics['recall_at_10']:<7.4f} | "
-            f"{metrics['precision_at_1']:<7.4f} | "
-            f"{metrics['precision_at_5']:<7.4f} | "
-            f"{metrics['mrr']:<7.4f} | "
-            f"{metrics['ndcg_at_10']:<7.4f}"
-        )
+    summary = manifest["evaluation_summary"]
+    quality = summary["retrieval_and_answer_quality"]
+    lat = summary["latency_profile_p95"]
+
+    print("=" * 80)
+    print("CONSTITUTIONGPT -- RAG EVALUATION REPORT")
+    print("=" * 80)
+    print("\n1. RETRIEVAL / ANSWER QUALITY:")
+    print(f"   Normal RAG F1 Score:   {quality['normal_rag_f1_score_pct']:.1f}%")
+    print(f"   Advanced RAG F1 Score: {quality['advanced_rag_f1_score_pct']:.1f}%")
+    print()
+    print(f"   Normal RAG Accuracy:   {quality['normal_rag_accuracy_pct']:.1f}%")
+    print(f"   Advanced RAG Accuracy: {quality['advanced_rag_accuracy_pct']:.1f}%")
 
     print("\n2. END-TO-END PIPELINE COMPARISON (Normal RAG vs Advanced RAG):")
     ret = manifest["pipeline_comparison"]
     for metric, vals in ret.items():
-        print(f"  {metric:22s} | Normal: {vals['normal']:.4f}  -->  Advanced: {vals['advanced']:.4f}  (Delta: {vals['delta']:+.4f})")
+        if isinstance(vals, dict) and "normal" in vals and "advanced" in vals:
+            if metric in ["f1_score_pct", "accuracy_pct", "latency_p95_ms"]:
+                continue
+            delta = vals.get("delta", 0.0)
+            print(f"{metric:<19}| Normal: {vals['normal']:.4f} --> Advanced: {vals['advanced']:.4f} (Delta: {delta:+.4f})")
 
-    print("\n3. ANSWER & CITATION ACCURACY:")
-    ans = manifest["answer_and_abstention"]
-    print(f"  Normal Citation Validity:   {ans['normal_rag']['citation_validity_rate_pct']}%")
-    print(f"  Advanced Citation Validity: {ans['advanced_rag']['citation_validity_rate_pct']}%")
-    print(f"  Normal Abstention Rate:     {ans['normal_rag']['correct_abstention_rate_pct']}%")
-    print(f"  Advanced Abstention Rate:   {ans['advanced_rag']['correct_abstention_rate_pct']}%")
-
-    print("\n4. LATENCY PROFILE (p95):")
-    lat = manifest["latency_summary"]
-    print(f"  Normal RAG:   Mean={lat['normal_rag_latency']['mean_ms']} ms | p95={lat['normal_rag_latency']['p95_ms']} ms")
-    print(f"  Advanced RAG: Mean={lat['advanced_rag_latency']['mean_ms']} ms | p95={lat['advanced_rag_latency']['p95_ms']} ms")
+    print("\n3. LATENCY PROFILE (P95):")
+    print(f"   Normal RAG:   P95={lat['normal_rag_p95_ms']} ms")
+    print(f"   Advanced RAG: P95={lat['advanced_rag_p95_ms']} ms")
     print("=" * 80)

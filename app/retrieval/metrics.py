@@ -215,3 +215,72 @@ def compute_ndcg_at_k(
         return 0.0
 
     return min(max(actual_dcg / ideal_dcg, 0.0), 1.0)
+
+
+# ---------------------------------------------------------------------------
+# Binary Classification Metrics (F1 Score & Accuracy)
+# ---------------------------------------------------------------------------
+
+def compute_confusion_matrix(
+    predictions: Sequence[bool],
+    ground_truths: Sequence[bool],
+) -> Dict[str, int]:
+    """Compute confusion matrix counts (TP, TN, FP, FN) for binary classification.
+
+    Definitions:
+        - TP: Ground truth True, Prediction True
+        - TN: Ground truth False, Prediction False
+        - FP: Ground truth False, Prediction True
+        - FN: Ground truth True, Prediction False
+    """
+    if len(predictions) != len(ground_truths):
+        raise ValueError(
+            f"Length mismatch: {len(predictions)} predictions vs {len(ground_truths)} ground truths"
+        )
+
+    tp = sum(1 for p, g in zip(predictions, ground_truths) if p is True and g is True)
+    tn = sum(1 for p, g in zip(predictions, ground_truths) if p is False and g is False)
+    fp = sum(1 for p, g in zip(predictions, ground_truths) if p is True and g is False)
+    fn = sum(1 for p, g in zip(predictions, ground_truths) if p is False and g is True)
+
+    return {"tp": tp, "tn": tn, "fp": fp, "fn": fn, "total": len(predictions)}
+
+
+def compute_f1_score(tp: int, fp: int, fn: int) -> float:
+    """Compute F1 Score from confusion matrix counts: 2TP / (2TP + FP + FN).
+
+    Alternatively: 2 * (Precision * Recall) / (Precision + Recall).
+    Explicitly handles zero denominator, returning 0.0.
+    """
+    denominator = (2 * tp) + fp + fn
+    if denominator <= 0:
+        return 0.0
+    return float(2 * tp) / float(denominator)
+
+
+def compute_accuracy(tp: int, tn: int, fp: int, fn: int) -> float:
+    """Compute Classification Accuracy: (TP + TN) / (TP + TN + FP + FN).
+
+    Explicitly handles zero denominator, returning 0.0.
+    """
+    total = tp + tn + fp + fn
+    if total <= 0:
+        return 0.0
+    return float(tp + tn) / float(total)
+
+
+def compute_binary_precision(tp: int, fp: int) -> float:
+    """Compute binary classification precision: TP / (TP + FP)."""
+    denominator = tp + fp
+    if denominator <= 0:
+        return 0.0
+    return float(tp) / float(denominator)
+
+
+def compute_binary_recall(tp: int, fn: int) -> float:
+    """Compute binary classification recall: TP / (TP + FN)."""
+    denominator = tp + fn
+    if denominator <= 0:
+        return 0.0
+    return float(tp) / float(denominator)
+

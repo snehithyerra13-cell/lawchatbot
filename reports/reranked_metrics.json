@@ -18,9 +18,9 @@
     "ndcg_at_10": 0.6474,
     "source_hit_at_5_pct": 76.0,
     "source_hit_at_10_pct": 84.0,
-    "mean_latency_ms": 6.625,
-    "median_latency_ms": 6.201,
-    "p95_latency_ms": 11.221
+    "mean_latency_ms": 4.296,
+    "median_latency_ms": 3.962,
+    "p95_latency_ms": 6.361
   },
   "queries": [
     {
@@ -57,7 +57,7 @@
       "ndcg_at_10": 0.9173194127129571,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 16.186
+      "latency_ms": 7.374
     },
     {
       "query_id": "gold_002",
@@ -93,7 +93,7 @@
       "ndcg_at_10": 0.9367311123434826,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 5.717
+      "latency_ms": 4.927
     },
     {
       "query_id": "gold_003",
@@ -130,7 +130,7 @@
       "ndcg_at_10": 0.8231817979910552,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 5.462
+      "latency_ms": 3.543
     },
     {
       "query_id": "gold_004",
@@ -166,7 +166,7 @@
       "ndcg_at_10": 0.8609101556836468,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 3.617
+      "latency_ms": 3.065
     },
     {
       "query_id": "gold_005",
@@ -202,7 +202,7 @@
       "ndcg_at_10": 0.9173194127129571,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 3.405
+      "latency_ms": 2.906
     },
     {
       "query_id": "gold_006",
@@ -239,7 +239,7 @@
       "ndcg_at_10": 0.22434336714668326,
       "source_hit_5": false,
       "source_hit_10": true,
-      "latency_ms": 5.366
+      "latency_ms": 4.403
     },
     {
       "query_id": "gold_007",
@@ -275,7 +275,7 @@
       "ndcg_at_10": 0.4495875851222952,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 9.187
+      "latency_ms": 6.392
     },
     {
       "query_id": "gold_008",
@@ -311,7 +311,7 @@
       "ndcg_at_10": 0.0,
       "source_hit_5": false,
       "source_hit_10": false,
-      "latency_ms": 11.243
+      "latency_ms": 6.023
     },
     {
       "query_id": "gold_009",
@@ -347,7 +347,7 @@
       "ndcg_at_10": 0.8609101556836468,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 7.905
+      "latency_ms": 6.238
     },
     {
       "query_id": "gold_010",
@@ -383,7 +383,7 @@
       "ndcg_at_10": 0.9224037382324788,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 8.53
+      "latency_ms": 4.49
     },
     {
       "query_id": "gold_011",
@@ -419,7 +419,7 @@
       "ndcg_at_10": 0.709969909600141,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 6.387
+      "latency_ms": 3.678
     },
     {
       "query_id": "gold_012",
@@ -455,7 +455,7 @@
       "ndcg_at_10": 0.8609101556836468,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 11.132
+      "latency_ms": 3.923
     },
     {
       "query_id": "gold_013",
@@ -491,7 +491,7 @@
       "ndcg_at_10": 0.45865970635647857,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 3.857
+      "latency_ms": 4.517
     },
     {
       "query_id": "gold_014",
@@ -527,7 +527,7 @@
       "ndcg_at_10": 0.9173194127129571,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 6.807
+      "latency_ms": 3.504
     },
     {
       "query_id": "gold_015",
@@ -563,7 +563,7 @@
       "ndcg_at_10": 0.27614065883146727,
       "source_hit_5": false,
       "source_hit_10": true,
-      "latency_ms": 7.23
+      "latency_ms": 3.9
     },
     {
       "query_id": "gold_016",
@@ -601,7 +601,7 @@
       "ndcg_at_10": 0.0,
       "source_hit_5": false,
       "source_hit_10": false,
-      "latency_ms": 6.755
+      "latency_ms": 3.749
     },
     {
       "query_id": "gold_017",
@@ -638,7 +638,7 @@
       "ndcg_at_10": 0.9580414003446834,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 6.201
+      "latency_ms": 5.166
     },
     {
       "query_id": "gold_018",
@@ -675,7 +675,7 @@
       "ndcg_at_10": 1.0,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 4.012
+      "latency_ms": 3.775
     },
     {
       "query_id": "gold_019",
@@ -712,7 +712,7 @@
       "ndcg_at_10": 0.9580414003446834,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 6.722
+      "latency_ms": 4.019
     },
     {
       "query_id": "gold_020",
@@ -748,7 +748,7 @@
       "ndcg_at_10": 0.9173194127129571,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 5.924
+      "latency_ms": 4.222
     },
     {
       "query_id": "gold_021",
@@ -784,7 +784,7 @@
       "ndcg_at_10": 0.10646464774659967,
       "source_hit_5": false,
       "source_hit_10": false,
-      "latency_ms": 3.096
+      "latency_ms": 3.339
     },
     {
       "query_id": "gold_022",
@@ -820,7 +820,7 @@
       "ndcg_at_10": 0.45865970635647857,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 2.544
+      "latency_ms": 2.613
     },
     {
       "query_id": "gold_023",
@@ -857,7 +857,7 @@
       "ndcg_at_10": 0.7895959410076381,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 8.843
+      "latency_ms": 3.463
     },
     {
       "query_id": "gold_024",
@@ -893,7 +893,7 @@
       "ndcg_at_10": 0.8609101556836468,
       "source_hit_5": true,
       "source_hit_10": true,
-      "latency_ms": 6.055
+      "latency_ms": 3.962
     },
     {
       "query_id": "gold_025",
@@ -929,7 +929,7 @@
       "ndcg_at_10": 0.0,
       "source_hit_5": false,
       "source_hit_10": false,
-      "latency_ms": 3.444
+      "latency_ms": 4.197
     }
   ]
 }

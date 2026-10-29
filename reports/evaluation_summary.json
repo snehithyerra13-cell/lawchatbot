@@ -1,0 +1,12 @@
+{
+  "retrieval_and_answer_quality": {
+    "normal_rag_f1_score_pct": 98.0,
+    "advanced_rag_f1_score_pct": 88.9,
+    "normal_rag_accuracy_pct": 96.4,
+    "advanced_rag_accuracy_pct": 82.1
+  },
+  "latency_profile_p95": {
+    "normal_rag_p95_ms": 1.502,
+    "advanced_rag_p95_ms": 4.64
+  }
+}

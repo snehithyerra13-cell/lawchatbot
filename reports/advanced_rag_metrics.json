@@ -13,8 +13,8 @@
     "mrr": 0.8161,
     "hit_rate_at_5": 0.88,
     "hit_rate_at_10": 0.96,
-    "ndcg_at_5": 0.7334,
-    "ndcg_at_10": 0.7587,
+    "ndcg_at_5": 0.7381,
+    "ndcg_at_10": 0.7634,
     "source_hit_at_5_pct": 88.0,
     "source_hit_at_10_pct": 96.0
   },
@@ -51,13 +51,13 @@
         "const_31c_p49_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.227,
-        "dense_retrieval_ms": 1.7,
-        "bm25_retrieval_ms": 0.784,
-        "fusion_ms": 0.065,
-        "reranking_ms": 2.979,
-        "generation_ms": 0.022,
-        "total_ms": 5.935
+        "preprocessing_ms": 0.127,
+        "dense_retrieval_ms": 0.855,
+        "bm25_retrieval_ms": 0.93,
+        "fusion_ms": 0.086,
+        "reranking_ms": 2.897,
+        "generation_ms": 0.019,
+        "total_ms": 5.036
       }
     },
     {
@@ -92,13 +92,13 @@
         "const_64_p352_c02"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.219,
-        "dense_retrieval_ms": 3.923,
-        "bm25_retrieval_ms": 1.023,
-        "fusion_ms": 0.036,
-        "reranking_ms": 2.639,
-        "generation_ms": 0.013,
-        "total_ms": 7.934
+        "preprocessing_ms": 0.124,
+        "dense_retrieval_ms": 0.652,
+        "bm25_retrieval_ms": 0.526,
+        "fusion_ms": 0.03,
+        "reranking_ms": 1.516,
+        "generation_ms": 0.008,
+        "total_ms": 2.919
       }
     },
     {
@@ -133,13 +133,13 @@
         "const_41_p350_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.175,
-        "dense_retrieval_ms": 0.897,
-        "bm25_retrieval_ms": 0.906,
-        "fusion_ms": 0.036,
-        "reranking_ms": 3.251,
-        "generation_ms": 0.009,
-        "total_ms": 5.395
+        "preprocessing_ms": 0.118,
+        "dense_retrieval_ms": 0.576,
+        "bm25_retrieval_ms": 0.493,
+        "fusion_ms": 0.027,
+        "reranking_ms": 2.238,
+        "generation_ms": 0.007,
+        "total_ms": 3.525
       }
     },
     {
@@ -174,13 +174,13 @@
         "const_12_p37_c02"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.186,
-        "dense_retrieval_ms": 1.809,
-        "bm25_retrieval_ms": 1.524,
-        "fusion_ms": 0.07,
-        "reranking_ms": 3.148,
-        "generation_ms": 0.018,
-        "total_ms": 6.924
+        "preprocessing_ms": 0.099,
+        "dense_retrieval_ms": 0.638,
+        "bm25_retrieval_ms": 0.442,
+        "fusion_ms": 0.044,
+        "reranking_ms": 1.425,
+        "generation_ms": 0.008,
+        "total_ms": 2.74
       }
     },
     {
@@ -215,13 +215,13 @@
         "const_376_p280_c02"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.123,
-        "dense_retrieval_ms": 0.859,
-        "bm25_retrieval_ms": 0.667,
-        "fusion_ms": 0.037,
-        "reranking_ms": 2.785,
-        "generation_ms": 0.012,
-        "total_ms": 4.624
+        "preprocessing_ms": 0.126,
+        "dense_retrieval_ms": 0.857,
+        "bm25_retrieval_ms": 0.508,
+        "fusion_ms": 0.043,
+        "reranking_ms": 1.855,
+        "generation_ms": 0.009,
+        "total_ms": 3.473
       }
     },
     {
@@ -256,13 +256,13 @@
         "const_7_p35_c02"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.232,
-        "dense_retrieval_ms": 1.151,
-        "bm25_retrieval_ms": 1.279,
-        "fusion_ms": 0.047,
-        "reranking_ms": 3.854,
-        "generation_ms": 0.011,
-        "total_ms": 6.697
+        "preprocessing_ms": 0.159,
+        "dense_retrieval_ms": 0.633,
+        "bm25_retrieval_ms": 0.627,
+        "fusion_ms": 0.024,
+        "reranking_ms": 1.727,
+        "generation_ms": 0.004,
+        "total_ms": 3.22
       }
     },
     {
@@ -297,13 +297,13 @@
         "const_18_p40_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.166,
-        "dense_retrieval_ms": 1.425,
-        "bm25_retrieval_ms": 1.128,
-        "fusion_ms": 0.032,
-        "reranking_ms": 3.017,
-        "generation_ms": 0.013,
-        "total_ms": 5.885
+        "preprocessing_ms": 0.127,
+        "dense_retrieval_ms": 0.608,
+        "bm25_retrieval_ms": 0.9,
+        "fusion_ms": 0.025,
+        "reranking_ms": 1.773,
+        "generation_ms": 0.007,
+        "total_ms": 3.485
       }
     },
     {
@@ -338,13 +338,13 @@
         "const_19_p40_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.217,
-        "dense_retrieval_ms": 1.15,
-        "bm25_retrieval_ms": 1.378,
-        "fusion_ms": 0.043,
-        "reranking_ms": 3.656,
-        "generation_ms": 0.012,
-        "total_ms": 6.545
+        "preprocessing_ms": 0.115,
+        "dense_retrieval_ms": 0.553,
+        "bm25_retrieval_ms": 0.618,
+        "fusion_ms": 0.02,
+        "reranking_ms": 3.246,
+        "generation_ms": 0.017,
+        "total_ms": 4.681
       }
     },
     {
@@ -379,13 +379,13 @@
         "const_145_p96_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.145,
-        "dense_retrieval_ms": 1.228,
-        "bm25_retrieval_ms": 1.218,
-        "fusion_ms": 0.049,
-        "reranking_ms": 2.778,
-        "generation_ms": 0.01,
-        "total_ms": 5.495
+        "preprocessing_ms": 0.163,
+        "dense_retrieval_ms": 0.768,
+        "bm25_retrieval_ms": 0.666,
+        "fusion_ms": 0.029,
+        "reranking_ms": 1.804,
+        "generation_ms": 0.007,
+        "total_ms": 3.484
       }
     },
     {
@@ -420,13 +420,13 @@
         "const_32_p50_c02"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.128,
-        "dense_retrieval_ms": 0.673,
-        "bm25_retrieval_ms": 0.791,
-        "fusion_ms": 0.021,
-        "reranking_ms": 1.886,
-        "generation_ms": 0.01,
-        "total_ms": 3.584
+        "preprocessing_ms": 0.194,
+        "dense_retrieval_ms": 0.819,
+        "bm25_retrieval_ms": 0.781,
+        "fusion_ms": 0.032,
+        "reranking_ms": 1.78,
+        "generation_ms": 0.007,
+        "total_ms": 3.691
       }
     },
     {
@@ -461,13 +461,13 @@
         "const_64_p352_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.43,
-        "dense_retrieval_ms": 2.034,
-        "bm25_retrieval_ms": 1.063,
-        "fusion_ms": 0.036,
-        "reranking_ms": 2.647,
-        "generation_ms": 0.015,
-        "total_ms": 6.345
+        "preprocessing_ms": 0.122,
+        "dense_retrieval_ms": 0.56,
+        "bm25_retrieval_ms": 0.615,
+        "fusion_ms": 0.022,
+        "reranking_ms": 1.822,
+        "generation_ms": 0.012,
+        "total_ms": 3.234
       }
     },
     {
@@ -502,13 +502,13 @@
         "const_301_p202_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.152,
-        "dense_retrieval_ms": 0.867,
-        "bm25_retrieval_ms": 0.74,
-        "fusion_ms": 0.021,
-        "reranking_ms": 1.742,
-        "generation_ms": 0.007,
-        "total_ms": 3.583
+        "preprocessing_ms": 0.153,
+        "dense_retrieval_ms": 0.827,
+        "bm25_retrieval_ms": 0.709,
+        "fusion_ms": 0.032,
+        "reranking_ms": 1.774,
+        "generation_ms": 0.008,
+        "total_ms": 3.558
       }
     },
     {
@@ -543,13 +543,13 @@
         "const_15_p342_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.132,
-        "dense_retrieval_ms": 0.654,
-        "bm25_retrieval_ms": 0.641,
-        "fusion_ms": 0.019,
-        "reranking_ms": 1.876,
-        "generation_ms": 0.013,
-        "total_ms": 3.461
+        "preprocessing_ms": 0.134,
+        "dense_retrieval_ms": 0.639,
+        "bm25_retrieval_ms": 0.651,
+        "fusion_ms": 0.022,
+        "reranking_ms": 3.679,
+        "generation_ms": 0.024,
+        "total_ms": 5.314
       }
     },
     {
@@ -584,13 +584,13 @@
         "const_275_p188_c02"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.214,
-        "dense_retrieval_ms": 0.892,
-        "bm25_retrieval_ms": 1.211,
-        "fusion_ms": 0.064,
-        "reranking_ms": 3.918,
-        "generation_ms": 0.01,
-        "total_ms": 6.373
+        "preprocessing_ms": 0.18,
+        "dense_retrieval_ms": 0.961,
+        "bm25_retrieval_ms": 0.951,
+        "fusion_ms": 0.059,
+        "reranking_ms": 3.65,
+        "generation_ms": 0.015,
+        "total_ms": 5.928
       }
     },
     {
@@ -625,13 +625,13 @@
         "const_66_p61_c02"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.135,
-        "dense_retrieval_ms": 0.938,
-        "bm25_retrieval_ms": 0.821,
-        "fusion_ms": 0.025,
-        "reranking_ms": 2.597,
-        "generation_ms": 0.011,
-        "total_ms": 4.645
+        "preprocessing_ms": 0.231,
+        "dense_retrieval_ms": 1.215,
+        "bm25_retrieval_ms": 1.227,
+        "fusion_ms": 0.052,
+        "reranking_ms": 3.442,
+        "generation_ms": 0.007,
+        "total_ms": 6.256
       }
     },
     {
@@ -666,13 +666,13 @@
         "const_293_p198_c03"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.182,
-        "dense_retrieval_ms": 1.226,
-        "bm25_retrieval_ms": 1.713,
-        "fusion_ms": 0.043,
-        "reranking_ms": 2.526,
-        "generation_ms": 0.007,
-        "total_ms": 5.773
+        "preprocessing_ms": 0.125,
+        "dense_retrieval_ms": 0.821,
+        "bm25_retrieval_ms": 3.173,
+        "fusion_ms": 0.085,
+        "reranking_ms": 2.441,
+        "generation_ms": 0.009,
+        "total_ms": 6.74
       }
     },
     {
@@ -707,13 +707,13 @@
         "const_31c_p49_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.131,
-        "dense_retrieval_ms": 1.27,
-        "bm25_retrieval_ms": 1.742,
-        "fusion_ms": 0.047,
-        "reranking_ms": 2.041,
-        "generation_ms": 0.01,
-        "total_ms": 5.335
+        "preprocessing_ms": 0.196,
+        "dense_retrieval_ms": 1.413,
+        "bm25_retrieval_ms": 1.671,
+        "fusion_ms": 0.071,
+        "reranking_ms": 3.534,
+        "generation_ms": 0.016,
+        "total_ms": 7.034
       }
     },
     {
@@ -731,30 +731,30 @@
       "mrr": 1.0,
       "hit_rate_at_5": 1.0,
       "hit_rate_at_10": 1.0,
-      "ndcg_at_5": 0.8838695436828513,
-      "ndcg_at_10": 0.8838695436828513,
+      "ndcg_at_5": 1.0,
+      "ndcg_at_10": 1.0,
       "source_hit_5": true,
       "source_hit_10": true,
       "retrieved_chunk_ids": [
         "const_356_p35_c01",
         "const_352_p239_c01",
+        "const_352_p239_c02",
         "const_259_p181_c01",
         "const_248_p177_c01",
         "const_358_p246_c01",
         "const_226_p135_c02",
         "const_32_p50_c02",
         "const_353_p241_c01",
-        "const_63_p60_c01",
-        "const_110_p81_c02"
+        "const_63_p60_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.148,
-        "dense_retrieval_ms": 0.955,
-        "bm25_retrieval_ms": 0.969,
-        "fusion_ms": 0.025,
-        "reranking_ms": 2.237,
-        "generation_ms": 0.021,
-        "total_ms": 4.445
+        "preprocessing_ms": 0.207,
+        "dense_retrieval_ms": 1.237,
+        "bm25_retrieval_ms": 2.323,
+        "fusion_ms": 0.086,
+        "reranking_ms": 2.424,
+        "generation_ms": 0.015,
+        "total_ms": 6.388
       }
     },
     {
@@ -789,13 +789,13 @@
         "const_37_p52_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.217,
-        "dense_retrieval_ms": 1.316,
-        "bm25_retrieval_ms": 1.365,
-        "fusion_ms": 0.047,
-        "reranking_ms": 3.596,
-        "generation_ms": 0.006,
-        "total_ms": 6.621
+        "preprocessing_ms": 0.261,
+        "dense_retrieval_ms": 1.405,
+        "bm25_retrieval_ms": 1.231,
+        "fusion_ms": 0.059,
+        "reranking_ms": 3.015,
+        "generation_ms": 0.009,
+        "total_ms": 6.079
       }
     },
     {
@@ -830,13 +830,13 @@
         "const_10_p36_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.132,
-        "dense_retrieval_ms": 0.695,
-        "bm25_retrieval_ms": 0.667,
-        "fusion_ms": 0.036,
-        "reranking_ms": 1.9,
-        "generation_ms": 0.009,
-        "total_ms": 3.487
+        "preprocessing_ms": 0.225,
+        "dense_retrieval_ms": 1.192,
+        "bm25_retrieval_ms": 1.048,
+        "fusion_ms": 0.123,
+        "reranking_ms": 3.4,
+        "generation_ms": 0.015,
+        "total_ms": 6.102
       }
     },
     {
@@ -866,8 +866,8 @@
         "const_226_p135_c03"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.038,
-        "total_ms": 0.038
+        "preprocessing_ms": 0.078,
+        "total_ms": 0.078
       }
     },
     {
@@ -894,8 +894,8 @@
         "const_19_p40_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.063,
-        "total_ms": 0.063
+        "preprocessing_ms": 0.054,
+        "total_ms": 0.054
       }
     },
     {
@@ -930,13 +930,13 @@
         "const_208_p126_c02"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.27,
-        "dense_retrieval_ms": 1.386,
-        "bm25_retrieval_ms": 1.347,
-        "fusion_ms": 0.043,
-        "reranking_ms": 2.409,
+        "preprocessing_ms": 0.177,
+        "dense_retrieval_ms": 1.57,
+        "bm25_retrieval_ms": 1.442,
+        "fusion_ms": 0.086,
+        "reranking_ms": 2.37,
         "generation_ms": 0.013,
-        "total_ms": 5.556
+        "total_ms": 5.75
       }
     },
     {
@@ -971,13 +971,13 @@
         "const_143_p96_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.138,
-        "dense_retrieval_ms": 0.76,
-        "bm25_retrieval_ms": 0.686,
-        "fusion_ms": 0.023,
-        "reranking_ms": 1.632,
-        "generation_ms": 0.006,
-        "total_ms": 3.307
+        "preprocessing_ms": 0.59,
+        "dense_retrieval_ms": 1.565,
+        "bm25_retrieval_ms": 1.251,
+        "fusion_ms": 0.068,
+        "reranking_ms": 2.882,
+        "generation_ms": 0.012,
+        "total_ms": 6.499
       }
     },
     {
@@ -1004,8 +1004,8 @@
         "const_1_p33_c01"
       ],
       "timings_ms": {
-        "preprocessing_ms": 0.028,
-        "total_ms": 0.028
+        "preprocessing_ms": 0.052,
+        "total_ms": 0.052
       }
     }
   ]
