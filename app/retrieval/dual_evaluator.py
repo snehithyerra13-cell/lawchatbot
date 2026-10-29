@@ -351,7 +351,7 @@ class DualRAGEvaluator:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
     print("=" * 80)
     print("RUNNING CONSTITUTIONGPT DUAL RAG BENCHMARK & EVALUATION HARNESS")
     print("=" * 80)
